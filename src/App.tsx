@@ -14,6 +14,8 @@ import Auth from "./pages/Auth";
 import Career from "./pages/Career";
 import Contact from "./pages/Contact";
 import Blog from "./pages/Blog";
+import Support from "./pages/Support";
+import MLTools from "./pages/MLTools";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
@@ -48,6 +50,9 @@ const App = () => (
                 <Route path="/career" element={<Career />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/blog" element={<Blog />} />
+                <Route path="/support" element={<Support />} />
+                <Route path="/ml-tools" element={<MLTools />} />
+                <Route path="/ml-tools/:tool" element={<MLTools />} />
                 <Route path="/admin/login" element={<AdminLogin />} />
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

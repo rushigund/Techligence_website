@@ -29,8 +29,18 @@ export const useFallbackGesture = () => {
       console.log("🎥 Initializing fallback gesture recognition...");
       setError(null);
 
+      // Wait for elements to be available
+      let retries = 0;
+      while ((!videoRef.current || !canvasRef.current) && retries < 10) {
+        console.log(
+          `⏳ Waiting for video/canvas elements... (attempt ${retries + 1})`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        retries++;
+      }
+
       if (!videoRef.current || !canvasRef.current) {
-        throw new Error("Video or canvas element not available");
+        throw new Error("Video or canvas elements not available after waiting");
       }
 
       // Check camera permissions
