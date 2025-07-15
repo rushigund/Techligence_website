@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, forwardRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -238,19 +238,20 @@ const Navigation = () => {
     return false;
   };
 
-  const NavLink = ({
-    item,
-    mobile = false,
-  }: {
-    item: any;
-    mobile?: boolean;
-  }) => {
+  const NavLink = forwardRef<
+    HTMLAnchorElement,
+    {
+      item: any;
+      mobile?: boolean;
+    }
+  >(({ item, mobile = false }, ref) => {
     const isController = item.href === "/controller";
     const shouldHighlight =
       isActive(item.href) || (isController && location.pathname === "/");
 
     return (
       <Link
+        ref={ref}
         to={item.href}
         onClick={() => mobile && setIsOpen(false)}
         className={cn(
@@ -271,7 +272,7 @@ const Navigation = () => {
         {item.name}
       </Link>
     );
-  };
+  });
 
   const DropdownNavItem = ({
     config,
