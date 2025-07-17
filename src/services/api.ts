@@ -82,6 +82,13 @@ export const contactAPI = {
 };
 
 /**
+ * Health Check API Service
+ */
+export const healthAPI = {
+  checkStatus: () => apiClient.get("/health"),
+};
+
+/**
  * URDF API Service
  * This is the missing `urdfAPI` that was causing the error.
  */
