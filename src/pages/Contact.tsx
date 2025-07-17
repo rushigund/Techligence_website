@@ -49,7 +49,13 @@ const Contact = () => {
     setIsSubmitting(true); // Set loading state
 
     // --- Client-side validation ---
-    if (!formData.name || !formData.email || !formData.subject || !formData.message || !formData.inquiryType) {
+    if (
+      !formData.name ||
+      !formData.email ||
+      !formData.subject ||
+      !formData.message ||
+      !formData.inquiryType
+    ) {
       toast.error("Please fill in all required fields.");
       setIsSubmitting(false);
       return;
@@ -59,10 +65,12 @@ const Contact = () => {
     console.log("Attempting to send form data:", formData);
 
     try {
-      const response = await contactAPI.submitContact(formData);
+      const response = await contactAPI.submitForm(formData);
 
       if (response.data.success) {
-        toast.success(response.data.message || "Your message has been sent successfully!");
+        toast.success(
+          response.data.message || "Your message has been sent successfully!",
+        );
         // Reset form after successful submission
         setFormData({
           name: "",
@@ -80,7 +88,10 @@ const Contact = () => {
     } catch (error: any) {
       console.error("❌ Contact form submission error:", error);
       // Display specific backend error message if available, otherwise a generic one
-      toast.error(error.response?.data?.message || "Error sending your message. Please try again.");
+      toast.error(
+        error.response?.data?.message ||
+          "Error sending your message. Please try again.",
+      );
     } finally {
       setIsSubmitting(false); // Reset loading state
     }
@@ -111,7 +122,8 @@ const Contact = () => {
     {
       icon: MapPin,
       title: "Visit Us",
-      details: "Saptagiri Building, Lokdhara Phase 3, Near Ganesh Nagar, Kalyan, Maharashtra, 421306",
+      details:
+        "Saptagiri Building, Lokdhara Phase 3, Near Ganesh Nagar, Kalyan, Maharashtra, 421306",
       description: "Our registered office",
     },
     {
@@ -240,7 +252,8 @@ const Contact = () => {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="inquiryType">Inquiry Type </Label> {/ Marked as required */}
+                        <Label htmlFor="inquiryType">Inquiry Type </Label>{" "}
+                        {/* Marked as required */}
                         <Select
                           value={formData.inquiryType}
                           onValueChange={(value) =>
@@ -294,7 +307,12 @@ const Contact = () => {
                       />
                     </div>
 
-                    <Button type="submit" size="lg" className="w-full gap-2" disabled={isSubmitting}>
+                    <Button
+                      type="submit"
+                      size="lg"
+                      className="w-full gap-2"
+                      disabled={isSubmitting}
+                    >
                       {isSubmitting ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       ) : (
@@ -334,13 +352,13 @@ const Contact = () => {
                     <CardContent>
                       <div className="flex items-center justify-between">
                         <a
-                          href={mailto:${dept.email}}
+                          href={`mailto:${dept.email}`}
                           className="text-primary hover:underline font-medium"
                         >
                           {dept.email}
                         </a>
                         <Button variant="outline" size="sm" asChild>
-                          <a href={mailto:${dept.email}}>
+                          <a href={`mailto:${dept.email}`}>
                             <Mail className="w-4 h-4 mr-2" />
                             Email
                           </a>
@@ -363,11 +381,14 @@ const Contact = () => {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span>Monday - Friday:</span>
-                      <span className="font-medium">10:00 AM - 6:00 PM IST</span>
+                      <span className="font-medium">
+                        10:00 AM - 6:00 PM IST
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span>Saturday:</span>
-                      <span className="font-medium">Closed</span> {/* Updated based on 10AM to 6PM IST business hours */}
+                      <span className="font-medium">Closed</span>{" "}
+                      {/* Updated based on 10AM to 6PM IST business hours */}
                     </div>
                     <div className="flex justify-between">
                       <span>Sunday:</span>
