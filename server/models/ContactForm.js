@@ -1,4 +1,5 @@
-const mongoose = require("mongoose");
+
+import mongoose from "mongoose";
 
 const contactFormSchema = new mongoose.Schema(
   {
@@ -124,5 +125,4 @@ contactFormSchema.statics.getStats = function () {
     },
   ]);
 };
-
-module.exports = mongoose.model("ContactForm", contactFormSchema);
+export default mongoose.model("ContactForm", contactFormSchema); // Change: Use export default

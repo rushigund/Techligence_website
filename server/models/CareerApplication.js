@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose"; // Change: Use import
 
 const careerApplicationSchema = new mongoose.Schema(
   {
@@ -198,4 +198,4 @@ careerApplicationSchema.pre("save", function (next) {
   next();
 });
 
-module.exports = mongoose.model("CareerApplication", careerApplicationSchema);
+export default mongoose.model("CareerApplication", careerApplicationSchema); // Change: Use export default

@@ -8,12 +8,17 @@ import morgan from "morgan";
 import compression from "compression";
 import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
+import paymentRoutes from "./routes/payment.js";
 
 // Import routes
 import authRoutes from "./routes/auth.js";
 import robotRoutes from "./routes/robots.js";
 import urdfRoutes from "./routes/urdf.js";
 import controlRoutes from "./routes/control.js";
+import careerRoutes from "./routes/career.js";
+import contactRoutes from "./routes/contact.js";
+
+
 
 // Import socket handlers
 import { setupSocketHandlers } from "./sockets/index.js";
@@ -101,7 +106,8 @@ app.use((req, res, next) => {
 });
 
 // Health check endpoint
-app.get("/health", (req, res) => {
+app.get("/api/health", (req, res) => {
+
   res.status(200).json({
     status: "OK",
     timestamp: new Date().toISOString(),
@@ -156,8 +162,10 @@ app.use("/api/auth", authRoutes);
 app.use("/api/robots", robotRoutes);
 app.use("/api/urdf", urdfRoutes);
 app.use("/api/control", controlRoutes);
-app.use("/api/career", require("./routes/career"));
-app.use("/api/contact", require("./routes/contact"));
+app.use("/api/career", careerRoutes);
+app.use("/api/contact", contactRoutes);
+app.use("/api/payment", paymentRoutes);
+
 
 // Initialize robot communication manager
 const robotCommManager = new RobotCommunicationManager();

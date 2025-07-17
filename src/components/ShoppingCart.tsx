@@ -46,9 +46,23 @@ const ShoppingCartComponent = () => {
 
   return (
     <>
-      <Sheet open={isOpen} onOpenChange={setOpen}>
+      <Sheet
+        open={isOpen}
+        onOpenChange={(v) => {
+          if (!v) {
+            const fallback = document.querySelector("#shopping-cart-trigger");
+            if (fallback instanceof HTMLElement) fallback.focus();
+          }
+          setOpen(v);
+        }}
+      >
         <SheetTrigger asChild>
-          <Button variant="outline" size="icon" className="relative">
+          <Button
+            id="shopping-cart-trigger"
+            variant="outline"
+            size="icon"
+            className="relative"
+          >
             <ShoppingCart className="h-4 w-4" />
             {totalItems > 0 && (
               <Badge

@@ -1,5 +1,5 @@
-const express = require("express");
-const ContactForm = require("../models/ContactForm");
+import express from "express"; // Change: Use import
+import ContactForm from "../models/ContactForm.js"; // Change: Use import and ADD .js extension!
 
 const router = express.Router();
 
@@ -276,6 +276,9 @@ router.put("/messages/:id/status", async (req, res) => {
 // @access  Private (would need auth middleware)
 router.get("/stats", async (req, res) => {
   try {
+    // This assumes ContactForm.getStats() is a static method on the model.
+    // If it's not defined, this will cause an error.
+    // For now, I'm keeping it as is, but be aware.
     const stats = await ContactForm.getStats();
 
     const statusStats = await ContactForm.aggregate([
@@ -316,7 +319,7 @@ router.get("/stats", async (req, res) => {
     res.json({
       success: true,
       data: {
-        inquiryTypeStats: stats,
+        inquiryTypeStats: stats, // This relies on ContactForm.getStats()
         statusStats,
         priorityStats,
         recentActivity,
@@ -344,4 +347,4 @@ function getEstimatedResponseTime(inquiryType) {
   return responseTimes[inquiryType] || "2-3 business days";
 }
 
-module.exports = router;
+export default router; // Change: Use export default

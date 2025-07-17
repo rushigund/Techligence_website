@@ -1,10 +1,18 @@
-const express = require("express");
-const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
-const CareerApplication = require("../models/CareerApplication");
+import express from "express"; // Change: Use import
+import multer from "multer"; // Change: Use import
+import path from "path"; // Change: Use import
+import fs from "fs"; // Change: Use import
+import CareerApplication from "../models/CareerApplication.js"; // Change: Use import and ADD .js extension!
 
 const router = express.Router();
+
+// Get __filename and __dirname in ES Modules
+// This is necessary because __dirname and __filename are not globally available in ES Modules
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, "../uploads/career");
@@ -352,4 +360,4 @@ router.get("/stats", async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router; // Change: Use export default
