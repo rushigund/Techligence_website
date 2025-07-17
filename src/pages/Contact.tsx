@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { contactAPI } from "@/services/api";
+import { contactAPI } from "@/services/api"; // Import the new contactAPI
 import {
   Card,
   CardContent,
@@ -29,7 +29,9 @@ import {
   Building,
   Users,
   Headphones,
+  Loader2, // Import Loader2 for loading state
 } from "lucide-react";
+import { toast } from "sonner"; // Import toast for notifications
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -40,15 +42,27 @@ const Contact = () => {
     message: "",
     inquiryType: "",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false); // New state for submission loading
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true); // Set loading state
+
+    // --- Client-side validation ---
+    if (!formData.name || !formData.email || !formData.subject || !formData.message || !formData.inquiryType) {
+      toast.error("Please fill in all required fields.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    // NEW: Log formData to console before sending
+    console.log("Attempting to send form data:", formData);
 
     try {
       const response = await contactAPI.submitContact(formData);
 
       if (response.data.success) {
-        alert(response.data.message);
+        toast.success(response.data.message || "Your message has been sent successfully!");
         // Reset form after successful submission
         setFormData({
           name: "",
@@ -60,11 +74,15 @@ const Contact = () => {
         });
         console.log("✅ Contact form submitted successfully:", response.data);
       } else {
+        // If backend sends a specific error message, use it
         throw new Error(response.data.message || "Submission failed");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Contact form submission error:", error);
-      alert("Error sending your message. Please try again.");
+      // Display specific backend error message if available, otherwise a generic one
+      toast.error(error.response?.data?.message || "Error sending your message. Please try again.");
+    } finally {
+      setIsSubmitting(false); // Reset loading state
     }
   };
 
@@ -81,26 +99,26 @@ const Contact = () => {
     {
       icon: Mail,
       title: "Email Us",
-      details: "hello@techligence.com",
+      details: "piyushshinde@techligence.net",
       description: "Send us an email anytime",
     },
     {
       icon: Phone,
       title: "Call Us",
-      details: "+1 (555) 123-4567",
-      description: "Mon-Fri from 8am to 6pm",
+      details: "+91 70208 12247",
+      description: "Mon-Fri from 10am to 6pm IST",
     },
     {
       icon: MapPin,
       title: "Visit Us",
-      details: "123 Tech Boulevard, San Francisco, CA 94105",
-      description: "Our main headquarters",
+      details: "Saptagiri Building, Lokdhara Phase 3, Near Ganesh Nagar, Kalyan, Maharashtra, 421306",
+      description: "Our registered office",
     },
     {
       icon: Clock,
       title: "Business Hours",
-      details: "Monday - Friday: 8:00 AM - 6:00 PM",
-      description: "Pacific Standard Time",
+      details: "Monday - Friday: 10:00 AM - 6:00 PM IST",
+      description: "Indian Standard Time",
     },
   ];
 
@@ -108,19 +126,19 @@ const Contact = () => {
     {
       icon: Users,
       title: "Sales & Partnerships",
-      email: "sales@techligence.com",
+      email: "sales@techligence.com", // Assuming these department-specific emails remain the same
       description: "Product inquiries and business partnerships",
     },
     {
       icon: Headphones,
       title: "Technical Support",
-      email: "support@techligence.com",
+      email: "support@techligence.com", // Assuming these department-specific emails remain the same
       description: "Technical assistance and troubleshooting",
     },
     {
       icon: Building,
       title: "General Inquiries",
-      email: "info@techligence.com",
+      email: "info@techligence.com", // Assuming these department-specific emails remain the same
       description: "General questions and information",
     },
   ];
@@ -222,12 +240,13 @@ const Contact = () => {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="inquiryType">Inquiry Type</Label>
+                        <Label htmlFor="inquiryType">Inquiry Type </Label> {/ Marked as required */}
                         <Select
                           value={formData.inquiryType}
                           onValueChange={(value) =>
                             setFormData({ ...formData, inquiryType: value })
                           }
+                          required // Mark as required
                         >
                           <SelectTrigger className="mt-1">
                             <SelectValue placeholder="Select inquiry type" />
@@ -275,9 +294,13 @@ const Contact = () => {
                       />
                     </div>
 
-                    <Button type="submit" size="lg" className="w-full gap-2">
-                      <Send className="w-4 h-4" />
-                      Send Message
+                    <Button type="submit" size="lg" className="w-full gap-2" disabled={isSubmitting}>
+                      {isSubmitting ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="w-4 h-4" />
+                      )}
+                      {isSubmitting ? "Sending Message..." : "Send Message"}
                     </Button>
                   </form>
                 </CardContent>
@@ -311,13 +334,13 @@ const Contact = () => {
                     <CardContent>
                       <div className="flex items-center justify-between">
                         <a
-                          href={`mailto:${dept.email}`}
+                          href={mailto:${dept.email}}
                           className="text-primary hover:underline font-medium"
                         >
                           {dept.email}
                         </a>
                         <Button variant="outline" size="sm" asChild>
-                          <a href={`mailto:${dept.email}`}>
+                          <a href={mailto:${dept.email}}>
                             <Mail className="w-4 h-4 mr-2" />
                             Email
                           </a>
@@ -340,11 +363,11 @@ const Contact = () => {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span>Monday - Friday:</span>
-                      <span className="font-medium">8:00 AM - 6:00 PM PST</span>
+                      <span className="font-medium">10:00 AM - 6:00 PM IST</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Saturday:</span>
-                      <span className="font-medium">9:00 AM - 2:00 PM PST</span>
+                      <span className="font-medium">Closed</span> {/* Updated based on 10AM to 6PM IST business hours */}
                     </div>
                     <div className="flex justify-between">
                       <span>Sunday:</span>
@@ -352,7 +375,7 @@ const Contact = () => {
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground mt-4">
-                    * Emergency technical support available 24/7 for enterprise
+                    * Emergency technical support available for enterprise
                     customers
                   </p>
                 </CardContent>
