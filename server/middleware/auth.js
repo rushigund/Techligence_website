@@ -24,7 +24,7 @@ export const authenticateToken = async (req, res, next) => {
     }
 
     req.userId = user._id;
-    req.user = user;
+    req.user = user; // Attach user object to request for role checking
     next();
   } catch (error) {
     if (error.name === "TokenExpiredError") {
@@ -49,85 +49,24 @@ export const authenticateToken = async (req, res, next) => {
   }
 };
 
-export const requireRole = (roles) => {
+// NEW: Authorization middleware to check user roles
+export const authorizeRoles = (...roles) => {
   return (req, res, next) => {
+    // Ensure authenticateToken has run and req.user is available
     if (!req.user) {
       return res.status(401).json({
         success: false,
-        message: "Authentication required",
+        message: "Authentication required for role check",
       });
     }
 
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
-        message: "Insufficient permissions",
+        message: "Forbidden: You do not have permission to perform this action.",
       });
     }
 
     next();
-  };
-};
-
-export const requireRobotAccess = (accessLevel = "view") => {
-  return async (req, res, next) => {
-    try {
-      const robotId = req.params.robotId || req.body.robotId;
-      if (!robotId) {
-        return res.status(400).json({
-          success: false,
-          message: "Robot ID required",
-        });
-      }
-
-      const Robot = (await import("../models/Robot.js")).default;
-      const robot = await Robot.findById(robotId);
-
-      if (!robot) {
-        return res.status(404).json({
-          success: false,
-          message: "Robot not found",
-        });
-      }
-
-      // Check if user is owner
-      if (robot.owner.toString() === req.userId.toString()) {
-        req.robot = robot;
-        return next();
-      }
-
-      // Check access permissions
-      const permission = robot.accessPermissions.find(
-        (perm) => perm.userId.toString() === req.userId.toString(),
-      );
-
-      if (!permission) {
-        return res.status(403).json({
-          success: false,
-          message: "Access denied to this robot",
-        });
-      }
-
-      // Check access level
-      const levels = ["view", "control", "admin"];
-      const requiredLevelIndex = levels.indexOf(accessLevel);
-      const userLevelIndex = levels.indexOf(permission.level);
-
-      if (userLevelIndex < requiredLevelIndex) {
-        return res.status(403).json({
-          success: false,
-          message: `${accessLevel} access required`,
-        });
-      }
-
-      req.robot = robot;
-      next();
-    } catch (error) {
-      console.error("Robot access check error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Access check failed",
-      });
-    }
   };
 };

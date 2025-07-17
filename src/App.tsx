@@ -17,6 +17,7 @@ import Blog from "./pages/Blog";
 import Support from "./pages/Support";
 import MLTools from "./pages/MLTools";
 import AdminLogin from "./pages/AdminLogin";
+import NewProductPage from "./pages/NewProductPage"; // Import the new product page
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
@@ -55,6 +56,15 @@ const App = () => (
                 <Route path="/ml-tools/:tool" element={<MLTools />} />
                 <Route path="/admin/login" element={<AdminLogin />} />
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                {/* Admin routes for managing products */}
+                <Route
+                  path="/admin/products/new"
+                  element={<NewProductPage />}
+                />
+                <Route
+                  path="/admin/products/edit/:productId"
+                  element={<NewProductPage />}
+                />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

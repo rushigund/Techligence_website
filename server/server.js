@@ -1,6 +1,5 @@
 import express from "express";
 import { createServer } from "http";
-import { Server } from "socket.io";
 import mongoose from "mongoose";
 import cors from "cors";
 import helmet from "helmet";
@@ -8,35 +7,25 @@ import morgan from "morgan";
 import compression from "compression";
 import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
 // Import routes
 import authRoutes from "./routes/auth.js";
-import robotRoutes from "./routes/robots.js";
-import urdfRoutes from "./routes/urdf.js";
-import controlRoutes from "./routes/control.js";
-
-// Import socket handlers
-import { setupSocketHandlers } from "./sockets/index.js";
-
-// Import robot communication
-import { RobotCommunicationManager } from "./services/robotComm.js";
+import productRoutes from "./routes/productRoutes.js";
+import blogRoutes from "./routes/blogRoutes.js"; // Import blog routes
+import contactRoutes from "./routes/contactRoutes.js"; // Import contact routes
+import careerRoutes from "./routes/careerRoutes.js"; // Import career routes
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
 const server = createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true,
-  },
-});
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5050; // Using 5050 as specified in the provided server.js
 const MONGODB_URI =
-  process.env.MONGODB_URI || "mongodb://localhost:27017/robotech";
+  process.env.MONGODB_URI || "mongodb://localhost:27017/techligence";
 
 // Security middleware - relaxed for development
 app.use(
@@ -74,13 +63,7 @@ app.use(morgan("combined"));
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
-// Static file serving for uploaded URDF files
-app.use("/uploads", express.static("uploads"));
-
-// Serve static files from the React app (for production)
-import path from "path";
-import { fileURLToPath } from "url";
-
+// Static file serving
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -117,18 +100,15 @@ app.get("/", (req, res) => {
   console.log("🏠 Root path accessed");
   if (process.env.NODE_ENV !== "production") {
     res.json({
-      message: "RoboTech Backend API",
+      message: "Techligence Backend API",
       status: "running",
       environment: "development",
       frontend: process.env.CLIENT_URL || "http://localhost:8080",
       api: {
         health: "/health",
         auth: "/api/auth",
-        robots: "/api/robots",
-        control: "/api/control",
-        urdf: "/api/urdf",
-        career: "/api/career",
-        contact: "/api/contact",
+        products: "/api/products", // Added products API info
+        blog: "/api/blogposts", // NEW: Added blog API info
       },
     });
   } else {
@@ -153,17 +133,11 @@ app.get("/debug", (req, res) => {
 
 // API routes
 app.use("/api/auth", authRoutes);
-app.use("/api/robots", robotRoutes);
-app.use("/api/urdf", urdfRoutes);
-app.use("/api/control", controlRoutes);
-app.use("/api/career", require("./routes/career"));
-app.use("/api/contact", require("./routes/contact"));
+app.use("/api", productRoutes);
+app.use("/api", blogRoutes); // NEW: Use blog routes under /api
+app.use("/api", contactRoutes); // Use contact routes under /api
+app.use("/api", careerRoutes);
 
-// Initialize robot communication manager
-const robotCommManager = new RobotCommunicationManager();
-
-// Setup Socket.IO handlers
-setupSocketHandlers(io, robotCommManager);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -189,7 +163,7 @@ app.get("*", (req, res) => {
   console.log(`🔍 Headers:`, req.headers);
 
   // Don't interfere with API routes
-  if (req.path.startsWith("/api/") || req.path.startsWith("/uploads/")) {
+  if (req.path.startsWith("/api/")) {
     console.log(`❌ API route not found: ${req.path}`);
     return res.status(404).json({
       success: false,
@@ -210,20 +184,13 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(buildPath, "index.html"));
 });
 
-// Connect to MongoDB with fallback to demo mode
+// Start server function
 const startServer = () => {
   server.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(
       `🌐 Client URL: ${process.env.CLIENT_URL || "http://localhost:5173"}`,
     );
-    console.log(`📡 Socket.IO ready for real-time communication`);
-
-    // Initialize robot communication
-    robotCommManager
-      .initialize()
-      .then(() => console.log("🤖 Robot communication initialized"))
-      .catch((err) => console.error("❌ Robot communication failed:", err));
   });
 };
 
@@ -260,7 +227,6 @@ process.on("SIGTERM", () => {
   console.log("🛑 SIGTERM received, shutting down gracefully...");
   server.close(() => {
     mongoose.connection.close();
-    robotCommManager.disconnect();
     process.exit(0);
   });
 });
@@ -269,9 +235,6 @@ process.on("SIGINT", () => {
   console.log("🛑 SIGINT received, shutting down gracefully...");
   server.close(() => {
     mongoose.connection.close();
-    robotCommManager.disconnect();
     process.exit(0);
   });
 });
-
-export { io, robotCommManager };

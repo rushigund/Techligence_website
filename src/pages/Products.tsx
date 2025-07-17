@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom"; // Import useNavigate
 import { useCartStore } from "@/store/cartStore";
 import ShoppingCart from "@/components/ShoppingCart";
 import {
@@ -29,13 +29,22 @@ import {
   Share2,
   Truck,
   RotateCcw,
+  PlusCircle, // Import PlusCircle icon for "Add New Product"
+  Edit, // Import Edit icon for update
+  Trash2, // Import Trash2 icon for delete
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext"; // Corrected path from 'context' to 'contexts'
 
 const Products = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [favorites, setFavorites] = useState<Set<number>>(new Set());
   const { addItem } = useCartStore();
+  const { user, isAuthenticated } = useAuth(); // Get user and isAuthenticated from AuthContext
+  const navigate = useNavigate(); // Initialize useNavigate
+
+  // Determine if the current user is an admin
+  const isAdmin = isAuthenticated && user?.role === "admin";
 
   const addToCart = (robot: any) => {
     addItem({
@@ -63,10 +72,29 @@ const Products = () => {
     });
   };
 
+  // Handle product update - now navigates to the edit page
+  const handleUpdateProduct = (robotId: number) => {
+    navigate(`/admin/products/edit/${robotId}`); // Navigate to the edit page with product ID
+  };
+
+  // Placeholder for handling product delete
+  const handleDeleteProduct = (robotId: number) => {
+    // TODO: Implement actual delete logic, e.g., show a confirmation dialog
+    if (
+      window.confirm(
+        `Are you sure you want to delete product with ID: ${robotId}?`,
+      )
+    ) {
+      console.log(`Admin confirmed deletion for product with ID: ${robotId}`);
+      toast.success(`Product ${robotId} deleted (simulated)`);
+      // In a real app, you'd call productsAPI.deleteProduct(robotId) here
+    }
+  };
+
   const robots = [
     {
       id: 1,
-      name: "Techligence Explorer Pro",
+      name: "RoboTech Explorer Pro",
       category: "exploration",
       price: "$12,999",
       originalPrice: "$15,999",
@@ -258,6 +286,19 @@ const Products = () => {
               reliability, and performance. Shop with confidence - Free shipping
               on all orders!
             </p>
+            {/* Add New Product Button (Admin Only) */}
+            {isAdmin && (
+              <div className="mt-8">
+                <Link to="/admin/products/new">
+                  {" "}
+                  {/* Assuming a route for adding new products */}
+                  <Button size="lg" className="gap-2">
+                    <PlusCircle className="w-5 h-5" />
+                    Add New Product
+                  </Button>
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -305,6 +346,27 @@ const Products = () => {
                   <div className="flex items-start justify-between mb-4">
                     <Badge variant={robot.badgeVariant}>{robot.badge}</Badge>
                     <div className="flex items-center gap-2">
+                      {/* Admin-only Update and Delete Buttons */}
+                      {isAdmin && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleUpdateProduct(robot.id)}
+                            className="h-8 w-8 text-blue-500 hover:bg-blue-50"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteProduct(robot.id)}
+                            className="h-8 w-8 text-red-500 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -318,9 +380,6 @@ const Products = () => {
                               : "text-muted-foreground"
                           }`}
                         />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Share2 className="w-4 h-4 text-muted-foreground" />
                       </Button>
                     </div>
                   </div>

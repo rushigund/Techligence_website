@@ -215,9 +215,7 @@ router.post(
 // Get current user profile
 router.get("/profile", authenticateToken, async (req, res) => {
   try {
-    const user = await User.findById(req.userId)
-      .populate("urdfFiles")
-      .populate("robotAccess.robotId");
+    const user = await User.findById(req.userId);
 
     if (!user) {
       return res.status(404).json({
@@ -252,10 +250,6 @@ router.put(
       .optional()
       .isLength({ min: 2, max: 50 })
       .withMessage("Last name must be between 2 and 50 characters"),
-    body("preferences.gestureSettings.sensitivity")
-      .optional()
-      .isFloat({ min: 0.1, max: 2.0 })
-      .withMessage("Sensitivity must be between 0.1 and 2.0"),
   ],
   async (req, res) => {
     try {
@@ -268,10 +262,9 @@ router.put(
         });
       }
 
-      const allowedUpdates = ["firstName", "lastName", "preferences"];
+      const allowedUpdates = ["firstName", "lastName"];
       const updates = {};
 
-      // Filter allowed updates
       Object.keys(req.body).forEach((key) => {
         if (allowedUpdates.includes(key)) {
           updates[key] = req.body[key];

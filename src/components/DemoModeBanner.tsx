@@ -1,7 +1,7 @@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Info, Zap } from "lucide-react";
-import { isDemoMode } from "@/services/api";
+import { isDemoMode } from "@/utils/demo";
 
 const DemoModeBanner = () => {
   if (!isDemoMode()) {
