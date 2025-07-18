@@ -34,15 +34,25 @@ const ShoppingCartComponent = () => {
 
   const [showCheckout, setShowCheckout] = useState(false);
 
+  // Changed to Indian Rupees (INR)
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-IN", { // Changed locale to en-IN
       style: "currency",
-      currency: "USD",
+      currency: "INR", // Changed currency to INR
     }).format(price);
   };
 
   const totalItems = getTotalItems();
-  const totalPrice = getTotalPrice();
+  const totalPrice = getTotalPrice(); // This is the subtotal from your store
+
+  // --- DEBUG LOGS ---
+  console.log("--- Shopping Cart Debug ---");
+  console.log("Cart Items:", items);
+  console.log("Subtotal (from store.getTotalPrice()):", totalPrice);
+  console.log("Estimated Tax (8%):", totalPrice * 0.08);
+  console.log("Total Price (including tax, passed to CheckoutDialog):", totalPrice * 1.08);
+  console.log("---------------------------");
+  // --- END DEBUG LOGS ---
 
   return (
     <>
@@ -109,6 +119,7 @@ const ShoppingCartComponent = () => {
                         className="flex gap-4 p-4 border rounded-lg"
                       >
                         <div className="w-16 h-16 bg-gradient-to-br from-accent/20 to-primary/10 rounded-lg flex items-center justify-center">
+                          {/* Assuming item.image is an emoji or icon string */}
                           <span className="text-2xl">{item.image}</span>
                         </div>
 
@@ -213,7 +224,7 @@ const ShoppingCartComponent = () => {
         open={showCheckout}
         onOpenChange={setShowCheckout}
         items={items}
-        totalPrice={totalPrice * 1.08}
+        totalPrice={totalPrice * 1.08} // This is the value sent to the backend
       />
     </>
   );

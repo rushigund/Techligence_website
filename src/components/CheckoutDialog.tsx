@@ -11,9 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CartItem, useCartStore } from "@/store/cartStore";
 import {
   CreditCard,
@@ -23,7 +21,6 @@ import {
   Mail,
   Check,
 } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface CheckoutDialogProps {
   open: boolean;
@@ -39,11 +36,15 @@ const CheckoutDialog = ({
   totalPrice,
 }: CheckoutDialogProps) => {
   const { clearCart } = useCartStore();
+
   const [step, setStep] = useState<"details" | "payment" | "confirmation">("details");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [orderNumber] = useState(() =>
-    Math.random().toString(36).substr(2, 9).toUpperCase()
-  );
+  const [orderNumber] = useState(() => Math.random().toString(36).substr(2, 9).toUpperCase());
+
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [otpError, setOtpError] = useState("");
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -54,14 +55,88 @@ const CheckoutDialog = ({
     city: "",
     state: "",
     zipCode: "",
-    newsletter: false,
   });
+
+  const [resendDisabled, setResendDisabled] = useState(false);
+  const [resendTimer, setResendTimer] = useState(30);
 
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(price);
 
-  const handleInputChange = (field: string, value: string | boolean) => {
+  const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const resetState = () => {
+    setStep("details");
+    setOtpSent(false);
+    setOtpVerified(false);
+    setOtpError("");
+    setIsProcessing(false);
+    setOtp("");
+    setFormData({
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      address: "",
+      city: "",
+      state: "",
+      zipCode: "",
+    });
+  };
+
+  const requestOtp = async () => {
+    const res = await fetch("/api/otp/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: formData.email }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      console.error("Backend error response:", text);
+      alert("Failed to send OTP.");
+      return;
+    }
+
+    const data = await res.json();
+    if (data.success) {
+      setOtpSent(true);
+      setResendDisabled(true);
+      setResendTimer(30);
+
+      const interval = setInterval(() => {
+        setResendTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            setResendDisabled(false);
+            return 30;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      alert("OTP sent to your email.");
+    } else {
+      alert("Failed to send OTP.");
+    }
+  };
+
+  const verifyOtp = async () => {
+    const res = await fetch("/api/otp/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: formData.email, otp }),
+    }).then((r) => r.json());
+
+    if (res.success) {
+      setOtpVerified(true);
+      alert("OTP verified. You can proceed to payment.");
+      setOtpError("");
+    } else {
+      setOtpError("Invalid or expired OTP.");
+    }
   };
 
   const loadRazorpayScript = () => {
@@ -74,87 +149,92 @@ const CheckoutDialog = ({
     });
   };
 
-  const startRazorpayPayment = async () => {
-    setIsProcessing(true);
+const startRazorpayPayment = async () => {
+  setIsProcessing(true);
 
-    const res = await loadRazorpayScript();
-    if (!res) {
-      alert("Failed to load Razorpay SDK");
-      setIsProcessing(false);
+  const res = await loadRazorpayScript();
+  if (!res) {
+    alert("Failed to load Razorpay SDK");
+    setIsProcessing(false);
+    return;
+  }
+
+  try {
+    const backendOrder = await fetch("/api/payment/create-order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount: totalPrice }),
+    }).then((res) => res.json());
+
+    if (!backendOrder.success) {
+      alert("Failed to create Razorpay order. Try again.");
       return;
     }
 
-    try {
-      const backendOrder = await fetch("/api/payment/create-order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: totalPrice }),
-      }).then((res) => res.json());
-console.log(backendOrder);
+    // Close your dialog *before* opening Razorpay
+    onOpenChange(false);
 
+    const options = {
+      key: import.meta.env.VITE_RAZORPAY_KEY,
+      amount: backendOrder.order.amount,
+      currency: backendOrder.order.currency,
+      name: `${formData.firstName} ${formData.lastName}`,
+      description: "Order Payment",
+      order_id: backendOrder.order.id,
+      handler: async (response: any) => {
+        const verifyRes = await fetch("/api/payment/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(response),
+        }).then((res) => res.json());
 
-      const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY,
-        amount: backendOrder.amount,
-        currency: backendOrder.currency,
+        if (verifyRes.success) {
+          setStep("confirmation");
+          onOpenChange(true); // reopen dialog to show confirmation
+        } else {
+          alert("Payment verification failed. Please contact support.");
+        }
+      },
+      modal: {
+        ondismiss: () => {
+          // User closed Razorpay without paying — optionally re-open the dialog
+          onOpenChange(true);
+        }
+      },
+      prefill: {
         name: `${formData.firstName} ${formData.lastName}`,
-        description: "Order Payment",
-        order_id: backendOrder.id,
-       handler: (response: any) => {
-  console.log("Payment Success", response);
+        email: formData.email,
+        contact: formData.phone,
+      },
+      notes: {
+        address: `${formData.address}, ${formData.city}, ${formData.state} - ${formData.zipCode}`,
+      },
+      theme: { color: "#3399cc" },
+    };
 
-  fetch("/api/payment/verify", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(response), // send {razorpay_payment_id, razorpay_order_id, razorpay_signature}
-  })
-  .then(res => res.json())
-  .then(data => {
-    if (data.success) {
-      setStep("confirmation"); // verified
-    } else {
-      alert("⚠️ Payment verification failed");
-    }
-  })
-  .catch(err => {
+    const rzp = new (window as any).Razorpay(options);
+    rzp.open();
+
+  } catch (err) {
     console.error(err);
-    alert("⚠️ Verification request failed");
-  });
-
-  setIsProcessing(false);
-},
-
-        prefill: {
-          name: `${formData.firstName} ${formData.lastName}`,
-          email: formData.email,
-          contact: formData.phone,
-        },
-        notes: {
-          address: `${formData.address}, ${formData.city}, ${formData.state} - ${formData.zipCode}`,
-        },
-        theme: {
-          color: "#3399cc",
-        },
-      };
-
-      const rzp = new (window as any).Razorpay(options);
-      rzp.open();
-    } catch (err) {
-      console.error(err);
-      alert("Payment failed to initiate");
-    }
-
+    alert("Payment failed to initiate. Try again.");
+  } finally {
     setIsProcessing(false);
-  };
+  }
+};
+
 
   const completeOrder = () => {
     clearCart();
+    resetState();
     onOpenChange(false);
-    setStep("details");
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(val) => {
+      if (!val) resetState();
+      onOpenChange(val);
+    }}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -165,7 +245,7 @@ console.log(backendOrder);
           </DialogTitle>
           <DialogDescription>
             {step === "details" && "Please provide your shipping and contact information"}
-            {step === "payment" && "Secure payment processing"}
+            {step === "payment" && "Secure payment processing with OTP verification"}
             {step === "confirmation" && `Order #${orderNumber} confirmed!`}
           </DialogDescription>
         </DialogHeader>
@@ -177,9 +257,7 @@ console.log(backendOrder);
             <div className="space-y-2 max-h-32 overflow-y-auto">
               {items.map((item) => (
                 <div key={item.id} className="flex justify-between text-sm">
-                  <span>
-                    {item.name} × {item.quantity}
-                  </span>
+                  <span>{item.name} × {item.quantity}</span>
                   <span>{formatPrice(item.priceValue * item.quantity)}</span>
                 </div>
               ))}
@@ -208,75 +286,40 @@ console.log(backendOrder);
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label>First Name *</Label>
-                        <Input
-                          value={formData.firstName}
-                          onChange={(e) => handleInputChange("firstName", e.target.value)}
-                          required
-                        />
+                        <Input value={formData.firstName} onChange={(e) => handleInputChange("firstName", e.target.value)} required />
                       </div>
                       <div>
                         <Label>Last Name *</Label>
-                        <Input
-                          value={formData.lastName}
-                          onChange={(e) => handleInputChange("lastName", e.target.value)}
-                          required
-                        />
+                        <Input value={formData.lastName} onChange={(e) => handleInputChange("lastName", e.target.value)} required />
                       </div>
                     </div>
-
                     <div>
                       <Label>Email *</Label>
-                      <Input
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => handleInputChange("email", e.target.value)}
-                        required
-                      />
+                      <Input type="email" value={formData.email} onChange={(e) => handleInputChange("email", e.target.value)} required />
                     </div>
-
                     <div>
                       <Label>Phone</Label>
-                      <Input
-                        value={formData.phone}
-                        onChange={(e) => handleInputChange("phone", e.target.value)}
-                      />
+                      <Input value={formData.phone} onChange={(e) => handleInputChange("phone", e.target.value)} />
                     </div>
                   </TabsContent>
 
                   <TabsContent value="shipping" className="space-y-4">
                     <div>
                       <Label>Address *</Label>
-                      <Input
-                        value={formData.address}
-                        onChange={(e) => handleInputChange("address", e.target.value)}
-                        required
-                      />
+                      <Input value={formData.address} onChange={(e) => handleInputChange("address", e.target.value)} required />
                     </div>
-
                     <div className="grid grid-cols-3 gap-4">
                       <div>
                         <Label>City *</Label>
-                        <Input
-                          value={formData.city}
-                          onChange={(e) => handleInputChange("city", e.target.value)}
-                          required
-                        />
+                        <Input value={formData.city} onChange={(e) => handleInputChange("city", e.target.value)} required />
                       </div>
                       <div>
                         <Label>State *</Label>
-                        <Input
-                          value={formData.state}
-                          onChange={(e) => handleInputChange("state", e.target.value)}
-                          required
-                        />
+                        <Input value={formData.state} onChange={(e) => handleInputChange("state", e.target.value)} required />
                       </div>
                       <div>
                         <Label>ZIP Code *</Label>
-                        <Input
-                          value={formData.zipCode}
-                          onChange={(e) => handleInputChange("zipCode", e.target.value)}
-                          required
-                        />
+                        <Input value={formData.zipCode} onChange={(e) => handleInputChange("zipCode", e.target.value)} required />
                       </div>
                     </div>
                   </TabsContent>
@@ -288,19 +331,32 @@ console.log(backendOrder);
               <div className="space-y-6">
                 <Alert>
                   <Shield className="h-4 w-4" />
-                  <AlertDescription>
-                    Your payment information is secure and encrypted.
-                  </AlertDescription>
+                  <AlertDescription>Your payment information is secure and encrypted.</AlertDescription>
                 </Alert>
 
                 <div className="space-y-4 text-center">
-                  <Button
-                    className="w-full"
-                    onClick={startRazorpayPayment}
-                    disabled={isProcessing}
-                  >
-                    {isProcessing ? "Processing..." : `Pay ${formatPrice(totalPrice)}`}
-                  </Button>
+                  {!otpSent && (
+                    <Button className="w-full" onClick={requestOtp}>
+                      Send OTP to {formData.email}
+                    </Button>
+                  )}
+
+                  {otpSent && !otpVerified && (
+                    <div className="space-y-4">
+                      <Input placeholder="Enter OTP" value={otp} onChange={(e) => setOtp(e.target.value)} />
+                      {otpError && <p className="text-red-500 text-sm">{otpError}</p>}
+                      <Button className="w-full" onClick={verifyOtp}>Verify OTP</Button>
+                      <Button variant="outline" className="w-full mt-2" onClick={requestOtp} disabled={resendDisabled}>
+                        {resendDisabled ? `Resend OTP in ${resendTimer}s` : "Resend OTP"}
+                      </Button>
+                    </div>
+                  )}
+
+                  {otpVerified && (
+                    <Button className="w-full" onClick={startRazorpayPayment} disabled={isProcessing}>
+                      {isProcessing ? "Processing..." : `Pay ${formatPrice(totalPrice)}`}
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
@@ -310,17 +366,13 @@ console.log(backendOrder);
                 <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
                   <Check className="w-8 h-8 text-green-600" />
                 </div>
-
                 <div>
                   <h3 className="text-xl font-semibold">Order Confirmed!</h3>
                   <p>Your order #{orderNumber} has been placed successfully.</p>
                 </div>
-
                 <Alert>
                   <Mail className="h-4 w-4" />
-                  <AlertDescription>
-                    A confirmation email has been sent to {formData.email}.
-                  </AlertDescription>
+                  <AlertDescription>A confirmation email has been sent to {formData.email}.</AlertDescription>
                 </Alert>
               </div>
             )}
@@ -329,36 +381,29 @@ console.log(backendOrder);
           <div className="border-t pt-4 mt-4 flex gap-3">
             {step === "details" && (
               <>
-                <Button variant="outline" onClick={() => onOpenChange(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  onClick={() => setStep("payment")}
-                  disabled={
-                    !formData.firstName ||
-                    !formData.lastName ||
-                    !formData.email ||
-                    !formData.address ||
-                    !formData.city ||
-                    !formData.state ||
-                    !formData.zipCode
-                  }
-                >
+                <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                <Button onClick={() => setStep("payment")} disabled={
+                  !formData.firstName || !formData.lastName || !formData.email ||
+                  !formData.address || !formData.city || !formData.state || !formData.zipCode
+                }>
                   Continue to Payment
                 </Button>
               </>
             )}
 
             {step === "payment" && (
-              <Button onClick={() => setStep("details")} disabled={isProcessing}>
+              <Button onClick={() => {
+                setStep("details");
+                setOtpSent(false);
+                setOtpVerified(false);
+                setOtpError("");
+              }} disabled={isProcessing}>
                 Back
               </Button>
             )}
 
             {step === "confirmation" && (
-              <Button className="w-full" onClick={completeOrder}>
-                Close
-              </Button>
+              <Button className="w-full" onClick={completeOrder}>Close</Button>
             )}
           </div>
         </div>

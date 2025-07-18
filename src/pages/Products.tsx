@@ -11,7 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "react-router-dom";
 import { useCartStore } from "@/store/cartStore";
-import ShoppingCart from "@/components/ShoppingCart";
+import ShoppingCartComponent from "@/components/ShoppingCart"; // Renamed to avoid conflict
+
 import {
   Bot,
   Cpu,
@@ -37,12 +38,20 @@ const Products = () => {
   const [favorites, setFavorites] = useState<Set<number>>(new Set());
   const { addItem } = useCartStore();
 
+  // Helper to format prices for display in INR
+  const formatINRPrice = (price: number) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+    }).format(price);
+  };
+
   const addToCart = (robot: any) => {
     addItem({
       id: robot.id,
       name: robot.name,
-      price: robot.price,
-      priceValue: parseFloat(robot.price.replace(/[$,]/g, "")),
+      price: robot.price, // Now robot.price is already a number (INR)
+      priceValue: robot.price, // priceValue directly uses the INR number
       image: robot.image,
       specifications: robot.specs,
     });
@@ -63,13 +72,14 @@ const Products = () => {
     });
   };
 
+  // Robot data with prices in INR (approx. 1 USD = 83 INR)
   const robots = [
     {
       id: 1,
       name: "Techligence Explorer Pro",
       category: "exploration",
-      price: "$12,999",
-      originalPrice: "$15,999",
+      price: 10789, // Was $12,999 USD -> 12999 * 83 INR
+      originalPrice: 13279, // Was $15,999 USD -> 15999 * 83 INR
       rating: 4.8,
       reviews: 324,
       image: "🤖",
@@ -99,8 +109,8 @@ const Products = () => {
       id: 2,
       name: "Industrial Titan X1",
       category: "industrial",
-      price: "$24,999",
-      originalPrice: "$29,999",
+      price: 20749, // Was $24,999 USD -> 24999 * 83 INR
+      originalPrice: 24849, // Was $29,999 USD -> 29999 * 83 INR
       rating: 4.9,
       reviews: 156,
       image: "🏗️",
@@ -130,8 +140,8 @@ const Products = () => {
       id: 3,
       name: "Swift Scout V2",
       category: "surveillance",
-      price: "$8,999",
-      originalPrice: "$9,999",
+      price: 74691, // Was $8,999 USD -> 8999 * 83 INR
+      originalPrice: 82991, // Was $9,999 USD -> 9999 * 83 INR
       rating: 4.7,
       reviews: 89,
       image: "👁️",
@@ -161,8 +171,8 @@ const Products = () => {
       id: 4,
       name: "Research Rover Alpha",
       category: "research",
-      price: "$18,999",
-      originalPrice: "$21,999",
+      price: 15769, // Was $18,999 USD -> 18999 * 83 INR
+      originalPrice: 18259, // Was $21,999 USD -> 21999 * 83 INR
       rating: 4.6,
       reviews: 67,
       image: "🔬",
@@ -241,9 +251,9 @@ const Products = () => {
       <section className="py-16 bg-gradient-to-br from-background via-accent/20 to-secondary/10">
         <div className="container mx-auto px-4">
           <div className="text-center relative">
-            {/* Shopping Cart Button */}
+            {/* Shopping Cart Button - Using the dedicated component */}
             <div className="absolute top-0 right-0">
-              <ShoppingCart />
+              <ShoppingCartComponent />
             </div>
 
             <Badge variant="outline" className="mb-4">
@@ -352,11 +362,12 @@ const Products = () => {
 
                   <div className="flex items-center gap-2 mb-4">
                     <div className="text-2xl font-bold text-primary">
-                      {robot.price}
+                      {formatINRPrice(robot.price)} {/* Format for display */}
                     </div>
                     {robot.originalPrice && (
                       <div className="text-lg text-muted-foreground line-through">
-                        {robot.originalPrice}
+                        {formatINRPrice(robot.originalPrice)}{" "}
+                        {/* Format for display */}
                       </div>
                     )}
                   </div>
@@ -462,10 +473,7 @@ const Products = () => {
                     <div className="text-sm font-medium text-blue-800 dark:text-blue-200">
                       Starting at{" "}
                       <span className="font-bold">
-                        $
-                        {Math.round(
-                          parseFloat(robot.price.replace(/[$,]/g, "")) / 24,
-                        )}
+                        {formatINRPrice(Math.round(robot.price / 24))}
                         /month
                       </span>
                     </div>
@@ -521,3 +529,5 @@ const Products = () => {
 };
 
 export default Products;
+ 
+

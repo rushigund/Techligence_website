@@ -55,7 +55,7 @@ const App = () => (
                 <Route path="/ml-tools/:tool" element={<MLTools />} />
                 <Route path="/admin/login" element={<AdminLogin />} />
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+             
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </div>

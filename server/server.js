@@ -17,7 +17,7 @@ import urdfRoutes from "./routes/urdf.js";
 import controlRoutes from "./routes/control.js";
 import careerRoutes from "./routes/career.js";
 import contactRoutes from "./routes/contact.js";
-
+import otpRoutes from "./routes/otp.js";
 
 
 // Import socket handlers
@@ -25,6 +25,8 @@ import { setupSocketHandlers } from "./sockets/index.js";
 
 // Import robot communication
 import { RobotCommunicationManager } from "./services/robotComm.js";
+
+
 
 // Load environment variables
 dotenv.config();
@@ -136,6 +138,7 @@ app.get("/", (req, res) => {
         career: "/api/career",
         contact: "/api/contact",
       },
+      
     });
   } else {
     // In production, this will be handled by the SPA fallback
@@ -165,6 +168,7 @@ app.use("/api/control", controlRoutes);
 app.use("/api/career", careerRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/payment", paymentRoutes);
+app.use("/api/otp", otpRoutes);
 
 
 // Initialize robot communication manager
