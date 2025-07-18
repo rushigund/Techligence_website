@@ -32,27 +32,17 @@ const ShoppingCartComponent = () => {
     getTotalPrice,
   } = useCartStore();
 
-  const [showCheckout, setShowCheckout] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
-  // Changed to Indian Rupees (INR)
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-IN", { // Changed locale to en-IN
+    return new Intl.NumberFormat("en-IN", {
       style: "currency",
-      currency: "INR", // Changed currency to INR
+      currency: "INR",
     }).format(price);
   };
 
   const totalItems = getTotalItems();
-  const totalPrice = getTotalPrice(); // This is the subtotal from your store
-
-  // --- DEBUG LOGS ---
-  console.log("--- Shopping Cart Debug ---");
-  console.log("Cart Items:", items);
-  console.log("Subtotal (from store.getTotalPrice()):", totalPrice);
-  console.log("Estimated Tax (8%):", totalPrice * 0.08);
-  console.log("Total Price (including tax, passed to CheckoutDialog):", totalPrice * 1.08);
-  console.log("---------------------------");
-  // --- END DEBUG LOGS ---
+  const totalPrice = getTotalPrice();
 
   return (
     <>
@@ -84,6 +74,7 @@ const ShoppingCartComponent = () => {
             )}
           </Button>
         </SheetTrigger>
+
         <SheetContent className="w-full sm:max-w-lg">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
@@ -99,15 +90,11 @@ const ShoppingCartComponent = () => {
             {items.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
                 <Package className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">
-                  Your cart is empty
-                </h3>
+                <h3 className="text-lg font-semibold mb-2">Your cart is empty</h3>
                 <p className="text-muted-foreground mb-4">
                   Add some amazing robots to get started!
                 </p>
-                <Button onClick={() => setOpen(false)}>
-                  Continue Shopping
-                </Button>
+                <Button onClick={() => setOpen(false)}>Continue Shopping</Button>
               </div>
             ) : (
               <>
@@ -119,14 +106,11 @@ const ShoppingCartComponent = () => {
                         className="flex gap-4 p-4 border rounded-lg"
                       >
                         <div className="w-16 h-16 bg-gradient-to-br from-accent/20 to-primary/10 rounded-lg flex items-center justify-center">
-                          {/* Assuming item.image is an emoji or icon string */}
                           <span className="text-2xl">{item.image}</span>
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-sm truncate">
-                            {item.name}
-                          </h4>
+                          <h4 className="font-semibold text-sm truncate">{item.name}</h4>
                           <p className="text-primary font-bold">
                             {formatPrice(item.priceValue)}
                           </p>
@@ -136,9 +120,7 @@ const ShoppingCartComponent = () => {
                               variant="outline"
                               size="icon"
                               className="h-6 w-6"
-                              onClick={() =>
-                                updateQuantity(item.id, item.quantity - 1)
-                              }
+                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
                             >
                               <Minus className="h-3 w-3" />
                             </Button>
@@ -149,9 +131,7 @@ const ShoppingCartComponent = () => {
                               variant="outline"
                               size="icon"
                               className="h-6 w-6"
-                              onClick={() =>
-                                updateQuantity(item.id, item.quantity + 1)
-                              }
+                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
                             >
                               <Plus className="h-3 w-3" />
                             </Button>
@@ -200,7 +180,7 @@ const ShoppingCartComponent = () => {
                   <div className="space-y-2">
                     <Button
                       className="w-full gap-2"
-                      onClick={() => setShowCheckout(true)}
+                      onClick={() => setIsCheckoutOpen(true)}
                     >
                       <CreditCard className="h-4 w-4" />
                       Proceed to Checkout
@@ -220,11 +200,13 @@ const ShoppingCartComponent = () => {
         </SheetContent>
       </Sheet>
 
+      {/* ✅ Checkout Dialog */}
       <CheckoutDialog
-        open={showCheckout}
-        onOpenChange={setShowCheckout}
+        open={isCheckoutOpen}
+        onOpenChange={setIsCheckoutOpen}
+        closeSidebar={() => setOpen(false)} // closes the Sheet
         items={items}
-        totalPrice={totalPrice * 1.08} // This is the value sent to the backend
+        totalPrice={totalPrice * 1.08} // with tax
       />
     </>
   );

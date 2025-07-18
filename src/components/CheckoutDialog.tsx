@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import {
   Dialog,
@@ -25,16 +26,20 @@ import {
 interface CheckoutDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  closeSidebar?: () => void;
   items: CartItem[];
   totalPrice: number;
 }
 
+
 const CheckoutDialog = ({
   open,
   onOpenChange,
+  closeSidebar,
   items,
   totalPrice,
 }: CheckoutDialogProps) => {
+  
   const { clearCart } = useCartStore();
 
   const [step, setStep] = useState<"details" | "payment" | "confirmation">("details");
@@ -171,8 +176,9 @@ const startRazorpayPayment = async () => {
       return;
     }
 
-    // Close your dialog *before* opening Razorpay
+    // 👇 Close Checkout Dialog and Sidebar here
     onOpenChange(false);
+    if (typeof closeSidebar === "function") closeSidebar();
 
     const options = {
       key: import.meta.env.VITE_RAZORPAY_KEY,
@@ -197,8 +203,7 @@ const startRazorpayPayment = async () => {
       },
       modal: {
         ondismiss: () => {
-          // User closed Razorpay without paying — optionally re-open the dialog
-          onOpenChange(true);
+          onOpenChange(true); // reopen dialog if payment was dismissed
         }
       },
       prefill: {
