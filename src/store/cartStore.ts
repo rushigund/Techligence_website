@@ -4,8 +4,8 @@ import { persist } from "zustand/middleware";
 export interface CartItem {
   id: number;
   name: string;
-  price: string;
-  priceValue: number;
+  price: number; // Changed from string to number
+  priceValue: number; // This will now directly hold the INR value
   image: string;
   quantity: number;
   specifications?: {
