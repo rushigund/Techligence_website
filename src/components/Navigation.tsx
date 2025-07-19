@@ -153,7 +153,7 @@ const Navigation = () => {
             items: [
               {
                 title: "R.T. Controller",
-                href: "/controller",
+                href: "https://robotmanipulator.vercel.app/",
                 description:
                   "Control robots with hand gestures and URDF uploads",
                 icon: Settings,
@@ -209,7 +209,7 @@ const Navigation = () => {
 
   const isActive = (href: string) => {
     // Controller should always stay highlighted as it's the main feature
-    if (href === "/controller") {
+    if (href === "https://robotmanipulator.vercel.app/") {
       return true;
     }
 
