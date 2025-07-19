@@ -8,10 +8,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs,  TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Link, useNavigate } from "react-router-dom"; // Import useNavigate
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Link } from "react-router-dom";
 import { useCartStore } from "@/store/cartStore";
-import ShoppingCart from "@/components/ShoppingCart";
+import ShoppingCartComponent from "@/components/ShoppingCart"; // Renamed to avoid conflict
+
 import {
   Bot,
   Cpu,
@@ -26,32 +27,31 @@ import {
   Filter,
   ShoppingCartIcon,
   Heart,
- // Share2,
+  Share2,
   Truck,
- // RotateCcw,
-  PlusCircle, // Import PlusCircle icon for "Add New Product"
-  Edit, // Import Edit icon for update
-  Trash2, // Import Trash2 icon for delete
+//  RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "@/contexts/AuthContext"; // Corrected path from 'context' to 'contexts'
 
 const Products = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [favorites, setFavorites] = useState<Set<number>>(new Set());
   const { addItem } = useCartStore();
-  const { user, isAuthenticated } = useAuth(); // Get user and isAuthenticated from AuthContext
-  const navigate = useNavigate(); // Initialize useNavigate
 
-  // Determine if the current user is an admin
-  const isAdmin = isAuthenticated && user?.role === "admin";
+  // Helper to format prices for display in INR
+  const formatINRPrice = (price: number) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+    }).format(price);
+  };
 
   const addToCart = (robot: any) => {
     addItem({
       id: robot.id,
       name: robot.name,
-      price: robot.price,
-      priceValue: parseFloat(robot.price.replace(/[$,]/g, "")),
+      price: robot.price, // Now robot.price is already a number (INR)
+      priceValue: robot.price, // priceValue directly uses the INR number
       image: robot.image,
       specifications: robot.specs,
     });
@@ -72,32 +72,14 @@ const Products = () => {
     });
   };
 
-  // Handle product update - now navigates to the edit page
-  const handleUpdateProduct = (robotId: number) => {
-    navigate(`/admin/products/edit/${robotId}`); // Navigate to the edit page with product ID
-  };
-
-  // Placeholder for handling product delete
-  const handleDeleteProduct = (robotId: number) => {
-    // TODO: Implement actual delete logic, e.g., show a confirmation dialog
-    if (
-      window.confirm(
-        `Are you sure you want to delete product with ID: ${robotId}?`,
-      )
-    ) {
-      console.log(`Admin confirmed deletion for product with ID: ${robotId}`);
-      toast.success(`Product ${robotId} deleted (simulated)`);
-      // In a real app, you'd call productsAPI.deleteProduct(robotId) here
-    }
-  };
-
+  // Robot data with prices in INR (approx. 1 USD = 83 INR)
   const robots = [
     {
       id: 1,
-      name: "RoboTech Explorer Pro",
+      name: "Techligence Explorer Pro",
       category: "exploration",
-      price: "$12,999",
-      originalPrice: "$15,999",
+      price: 10789, // Was $12,999 USD -> 12999 * 83 INR
+      originalPrice: 13279, // Was $15,999 USD -> 15999 * 83 INR
       rating: 4.8,
       reviews: 324,
       image: "🤖",
@@ -127,8 +109,8 @@ const Products = () => {
       id: 2,
       name: "Industrial Titan X1",
       category: "industrial",
-      price: "$24,999",
-      originalPrice: "$29,999",
+      price: 20749, // Was $24,999 USD -> 24999 * 83 INR
+      originalPrice: 24849, // Was $29,999 USD -> 29999 * 83 INR
       rating: 4.9,
       reviews: 156,
       image: "🏗️",
@@ -158,8 +140,8 @@ const Products = () => {
       id: 3,
       name: "Swift Scout V2",
       category: "surveillance",
-      price: "$8,999",
-      originalPrice: "$9,999",
+      price: 74691, // Was $8,999 USD -> 8999 * 83 INR
+      originalPrice: 82991, // Was $9,999 USD -> 9999 * 83 INR
       rating: 4.7,
       reviews: 89,
       image: "👁️",
@@ -189,8 +171,8 @@ const Products = () => {
       id: 4,
       name: "Research Rover Alpha",
       category: "research",
-      price: "$18,999",
-      originalPrice: "$21,999",
+      price: 15769, // Was $18,999 USD -> 18999 * 83 INR
+      originalPrice: 18259, // Was $21,999 USD -> 21999 * 83 INR
       rating: 4.6,
       reviews: 67,
       image: "🔬",
@@ -269,9 +251,9 @@ const Products = () => {
       <section className="py-16 bg-gradient-to-br from-background via-accent/20 to-secondary/10">
         <div className="container mx-auto px-4">
           <div className="text-center relative">
-            {/* Shopping Cart Button */}
+            {/* Shopping Cart Button - Using the dedicated component */}
             <div className="absolute top-0 right-0">
-              <ShoppingCart />
+              <ShoppingCartComponent />
             </div>
 
             <Badge variant="outline" className="mb-4">
@@ -286,19 +268,6 @@ const Products = () => {
               reliability, and performance. Shop with confidence - Free shipping
               on all orders!
             </p>
-            {/* Add New Product Button (Admin Only) */}
-            {isAdmin && (
-              <div className="mt-8">
-                <Link to="/admin/products/new">
-                  {" "}
-                  {/* Assuming a route for adding new products */}
-                  <Button size="lg" className="gap-2">
-                    <PlusCircle className="w-5 h-5" />
-                    Add New Product
-                  </Button>
-                </Link>
-              </div>
-            )}
           </div>
         </div>
       </section>
@@ -346,27 +315,6 @@ const Products = () => {
                   <div className="flex items-start justify-between mb-4">
                     <Badge variant={robot.badgeVariant}>{robot.badge}</Badge>
                     <div className="flex items-center gap-2">
-                      {/* Admin-only Update and Delete Buttons */}
-                      {isAdmin && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleUpdateProduct(robot.id)}
-                            className="h-8 w-8 text-blue-500 hover:bg-blue-50"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteProduct(robot.id)}
-                            className="h-8 w-8 text-red-500 hover:bg-red-50"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </>
-                      )}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -380,6 +328,9 @@ const Products = () => {
                               : "text-muted-foreground"
                           }`}
                         />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Share2 className="w-4 h-4 text-muted-foreground" />
                       </Button>
                     </div>
                   </div>
@@ -411,11 +362,12 @@ const Products = () => {
 
                   <div className="flex items-center gap-2 mb-4">
                     <div className="text-2xl font-bold text-primary">
-                      {robot.price}
+                      {formatINRPrice(robot.price)} {/* Format for display */}
                     </div>
                     {robot.originalPrice && (
                       <div className="text-lg text-muted-foreground line-through">
-                        {robot.originalPrice}
+                        {formatINRPrice(robot.originalPrice)}{" "}
+                        {/* Format for display */}
                       </div>
                     )}
                   </div>
@@ -521,10 +473,7 @@ const Products = () => {
                     <div className="text-sm font-medium text-blue-800 dark:text-blue-200">
                       Starting at{" "}
                       <span className="font-bold">
-                        $
-                        {Math.round(
-                          parseFloat(robot.price.replace(/[$,]/g, "")) / 24,
-                        )}
+                        {formatINRPrice(Math.round(robot.price / 24))}
                         /month
                       </span>
                     </div>
@@ -580,3 +529,5 @@ const Products = () => {
 };
 
 export default Products;
+ 
+

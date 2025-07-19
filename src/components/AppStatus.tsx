@@ -12,20 +12,18 @@ const AppStatus = () => {
   });
 
   useEffect(() => {
-    // Check router
     setStatus((prev) => ({
       ...prev,
       router: !!window.location.pathname,
     }));
 
-    // Check demo mode
-    const isDemo = import.meta.env.VITE_DEMO_MODE === "true";
+   const isDemo = import.meta.env.VITE_DEMO_MODE === "true";
     setStatus((prev) => ({
       ...prev,
       demo: isDemo,
     }));
 
-    // Test API
+   
     fetch("/api/health")
       .then((res) => res.json())
       .then(() => {

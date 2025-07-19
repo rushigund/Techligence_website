@@ -1,9 +1,6 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
-/**
- * Authenticate JWT token and attach user to req.
- */
 export const authenticateToken = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -53,14 +50,8 @@ export const authorizeRoles = (...roles) => {
   };
 };
 
-/**
- * Shortcut for admin-only routes.
- */
 export const requireAdmin = authorizeRoles("admin");
 
-/**
- * Allow admin or users with robotAccess flag.
- */
 export const requireRobotAccess = (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({ success: false, message: "Authentication required" });

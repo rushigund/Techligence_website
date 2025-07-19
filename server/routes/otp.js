@@ -5,7 +5,6 @@ import { generateOTP, saveOTP, sendOTP, verifyOTP } from "../services/otpService
 
 const router = express.Router();
 
-// send OTP
 router.post("/send", async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ success: false, error: "Email is required" });

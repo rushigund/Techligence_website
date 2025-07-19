@@ -68,9 +68,11 @@ const CheckoutDialog = ({
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: formData.email }),
     });
-    if (!res.ok) return alert("Failed to send OTP.");
+
+    if (!res.ok) throw new Error("Failed to send OTP.");
 
     const data = await res.json();
+
     if (data.success) {
       setOtpSent(true);
       setResendDisabled(true);
@@ -86,7 +88,7 @@ const CheckoutDialog = ({
         });
       }, 1000);
     } else {
-      alert("Failed to send OTP.");
+      throw new Error("Failed to send OTP.");
     }
   };
 
@@ -117,14 +119,22 @@ const CheckoutDialog = ({
   const startRazorpayPayment = async () => {
     setIsProcessing(true);
     const loaded = await loadRazorpayScript();
-    if (!loaded) return alert("Razorpay SDK failed to load.");
+    if (!loaded) {
+      alert("Razorpay SDK failed to load.");
+      setIsProcessing(false);
+      return;
+    }
 
     const backendOrder = await fetch("/api/payment/create-order", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ amount: totalPrice }),
     }).then((res) => res.json());
 
-    if (!backendOrder.success) return alert("Failed to create Razorpay order.");
+    if (!backendOrder.success) {
+      alert("Failed to create Razorpay order.");
+      setIsProcessing(false);
+      return;
+    }
 
     onOpenChange(false);
     if (typeof closeSidebar === "function") closeSidebar();
@@ -245,8 +255,7 @@ const CheckoutDialog = ({
             {step === "payment" && (
               <div className="space-y-4 text-center">
                 <Alert><Shield className="w-4 h-4" /><AlertDescription>Payment is encrypted and secure.</AlertDescription></Alert>
-                {!otpSent && <Button onClick={requestOtp} className="w-full">Send OTP to {formData.email}</Button>}
-                {otpSent && !otpVerified && (
+                {!otpVerified && (
                   <div className="space-y-2">
                     <Input placeholder="Enter OTP" value={otp} onChange={(e) => setOtp(e.target.value)} />
                     {otpError && <p className="text-red-500 text-sm">{otpError}</p>}
@@ -286,10 +295,23 @@ const CheckoutDialog = ({
             {step === "details" && (
               <>
                 <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                <Button onClick={() => setStep("payment")} disabled={
-                  !formData.firstName || !formData.lastName || !formData.email ||
-                  !formData.address || !formData.city || !formData.state || !formData.zipCode
-                }>Continue to Payment</Button>
+                <Button
+                  onClick={async () => {
+                    try {
+                      await requestOtp();
+                      alert("OTP sent to your email.");
+                      setStep("payment");
+                    } catch {
+                      alert("Failed to send OTP. Please try again.");
+                    }
+                  }}
+                  disabled={
+                    !formData.firstName || !formData.lastName || !formData.email ||
+                    !formData.address || !formData.city || !formData.state || !formData.zipCode
+                  }
+                >
+                  Continue to Payment
+                </Button>
               </>
             )}
             {step === "payment" && (

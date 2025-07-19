@@ -35,18 +35,18 @@ export async function sendOTP(email, otp) {
   });
 
   const mailOptions = {
-    from: `"RoboTech" <${process.env.SMTP_USER}>`,
+    from: `"Techligence Pvt. Ltd." <${process.env.SMTP_USER}>`,
     to: email,
-    subject: "Your OTP Code",
-    text: `Your OTP code is: ${otp}. `,
+    subject: " One Time password for you  Payment",
+    text: `Thank you for showing your interest . Use the following OTP to verify your identity: ${otp}. Do not share this code with anyone.  `,
   };
 
   try {
     const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Email sent to ${email}. MessageId: ${info.messageId}`);
+    console.log(` Email sent to ${email}. MessageId: ${info.messageId}`);
     return info;
   } catch (err) {
-    console.error("❌ Failed to send email:");
+    console.error(" Failed to send email:");
     console.error(err);
     throw err; // bubble up the error to be caught in the router
   }
