@@ -52,9 +52,9 @@ const Index = () => {
   ];
 
   const stats = [
-    { value: "500+", label: "Robots Deployed" },
+    { value: "10+", label: "Robots Developed" },
     { value: "99.9%", label: "Uptime" },
-    { value: "50+", label: "Countries" },
+    { value: "0", label: "Countries" },
     { value: "24/7", label: "Support" },
   ];
 
