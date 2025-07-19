@@ -1,5 +1,6 @@
 import express from "express";
 import { createServer } from "http";
+import { Server } from "socket.io";
 import mongoose from "mongoose";
 import cors from "cors";
 import helmet from "helmet";
@@ -13,199 +14,184 @@ import { fileURLToPath } from "url";
 // Import routes
 import authRoutes from "./routes/auth.js";
 import productRoutes from "./routes/productRoutes.js";
-import blogRoutes from "./routes/blogRoutes.js"; // Import blog routes
-import contactRoutes from "./routes/contactRoutes.js"; // Import contact routes
-import careerRoutes from "./routes/careerRoutes.js"; // Import career routes
+import blogRoutes from "./routes/blogRoutes.js";
+import contactRoutes from "./routes/contactRoutes.js";
+import careerRoutes from "./routes/careerRoutes.js";
+import robotRoutes from "./routes/robots.js";
+import urdfRoutes from "./routes/urdf.js";
+import controlRoutes from "./routes/control.js";
+import otpRoutes from "./routes/otp.js";
+import paymentRoutes from "./routes/payment.js";
+
+// Import sockets & robot comm
+import { setupSocketHandlers } from "./sockets/index.js";
+import { RobotCommunicationManager } from "./services/robotComm.js";
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
 const server = createServer(app);
-
-const PORT = process.env.PORT || 5050; // Using 5050 as specified in the provided server.js
-const MONGODB_URI =
-  process.env.MONGODB_URI || "mongodb://localhost:27017/techligence";
-
-// Security middleware - relaxed for development
-app.use(
-  helmet({
-    crossOriginEmbedderPolicy: false,
-    contentSecurityPolicy: false, // Disable CSP for development
-    crossOriginResourcePolicy: false,
-  }),
-);
-
-// Rate limiting - more permissive for development
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // Increased from 100 to 1000 requests per windowMs
-  message: "Too many requests from this IP, please try again later.",
-  skip: (req) => {
-    // Skip rate limiting for development environment
-    return process.env.NODE_ENV === "development";
+const io = new Server(server, {
+  cors: {
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
   },
 });
 
-app.use(limiter);
+const PORT = process.env.PORT || 5000;
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/robotech";
+const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
+const NODE_ENV = process.env.NODE_ENV || "development";
 
-// CORS configuration
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL || "http://localhost:8080",
-    credentials: true,
-  }),
-);
-
-// General middleware
-app.use(compression());
-app.use(morgan("combined"));
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ extended: true, limit: "50mb" }));
-
-// Static file serving
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// In development, we don't need to serve static files (Vite handles it)
-// In production, serve the built React app
-if (process.env.NODE_ENV === "production") {
+const robotCommManager = new RobotCommunicationManager();
+
+// Middleware
+app.use(helmet({ crossOriginEmbedderPolicy: false, contentSecurityPolicy: false, crossOriginResourcePolicy: false }));
+app.use(morgan(NODE_ENV === "development" ? "dev" : "combined"));
+app.use(compression());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+app.use(cors({ origin: CLIENT_URL, credentials: true }));
+
+// Rate limiter
+app.use(rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 1000,
+  skip: () => NODE_ENV === "development",
+}));
+
+// Static uploads
+app.use("/uploads", express.static("uploads"));
+
+// Serve React app in production
+if (NODE_ENV === "production") {
   const buildPath = path.join(__dirname, "../dist");
   app.use(express.static(buildPath));
 }
 
-// Demo mode middleware
+// Demo mode
 app.use((req, res, next) => {
-  if (global.demoMode && req.path.startsWith("/api/")) {
-    // For demo mode, provide mock responses for API calls
-    req.demoMode = true;
-  }
+  if (global.demoMode && req.path.startsWith("/api/")) req.demoMode = true;
   next();
 });
 
-// Health check endpoint
-app.get("/health", (req, res) => {
-  res.status(200).json({
+// Health check
+app.get("/api/health", (req, res) => {
+  res.json({
     status: "OK",
+    environment: NODE_ENV,
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    environment: process.env.NODE_ENV || "development",
     demoMode: !!global.demoMode,
     mongodb: !global.demoMode ? "connected" : "unavailable",
   });
 });
 
-// Root path handler for development
-app.get("/", (req, res) => {
-  console.log("🏠 Root path accessed");
-  if (process.env.NODE_ENV !== "production") {
-    res.json({
-      message: "Techligence Backend API",
-      status: "running",
-      environment: "development",
-      frontend: process.env.CLIENT_URL || "http://localhost:8080",
-      api: {
-        health: "/health",
-        auth: "/api/auth",
-        products: "/api/products", // Added products API info
-        blog: "/api/blogposts", // NEW: Added blog API info
-      },
-    });
-  } else {
-    // In production, this will be handled by the SPA fallback
-    res.redirect("/");
-  }
-});
-
-// Debug route to test 403 issues
-app.get("/debug", (req, res) => {
-  console.log("🐛 Debug route accessed");
+// Debug
+app.get("/api/debug", (req, res) => {
   res.json({
-    message: "Debug endpoint working",
+    message: "Debug endpoint",
     timestamp: new Date().toISOString(),
     headers: req.headers,
     ip: req.ip,
     method: req.method,
     path: req.path,
-    environment: process.env.NODE_ENV || "development",
   });
 });
 
-// API routes
+// Root (development info)
+app.get("/", (req, res) => {
+  if (NODE_ENV !== "production") {
+    res.json({
+      message: "RoboTech Backend API",
+      environment: NODE_ENV,
+      frontend: CLIENT_URL,
+      api: {
+        health: "/api/health",
+        auth: "/api/auth",
+        robots: "/api/robots",
+        control: "/api/control",
+        urdf: "/api/urdf",
+        career: "/api/career",
+        contact: "/api/contact",
+        payment: "/api/payment",
+        otp: "/api/otp",
+      },
+    });
+  } else {
+    res.redirect("/");
+  }
+});
+
+// API Routes
 app.use("/api/auth", authRoutes);
-app.use("/api", productRoutes);
-app.use("/api", blogRoutes); // NEW: Use blog routes under /api
-app.use("/api", contactRoutes); // Use contact routes under /api
-app.use("/api", careerRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/blogposts", blogRoutes);
+app.use("/api/contact", contactRoutes);
+app.use("/api/career", careerRoutes);
+app.use("/api/robots", robotRoutes);
+app.use("/api/urdf", urdfRoutes);
+app.use("/api/control", controlRoutes);
+app.use("/api/otp", otpRoutes);
+app.use("/api/payment", paymentRoutes);
 
+// Fallback API 404
+app.use("/api/*", (req, res) => {
+  res.status(404).json({ success: false, message: "API route not found" });
+});
 
-// Error handling middleware
+// SPA Fallback
+app.get("*", (req, res) => {
+  if (req.path.startsWith("/api/") || req.path.startsWith("/uploads/")) {
+    return res.status(404).json({ success: false, message: "API route not found" });
+  }
+
+  if (NODE_ENV !== "production") {
+    const redirectUrl = `${CLIENT_URL}${req.path}`;
+    return res.redirect(redirectUrl);
+  }
+
+  const buildPath = path.join(__dirname, "../dist");
+  res.sendFile(path.join(buildPath, "index.html"));
+});
+
+// Error handler
 app.use((err, req, res, next) => {
   console.error("Error:", err);
 
   if (err.code === "LIMIT_FILE_SIZE") {
-    return res.status(400).json({
-      success: false,
-      message: "File too large. Maximum size is 50MB.",
-    });
+    return res.status(400).json({ success: false, message: "File too large. Max: 50MB." });
   }
 
   res.status(err.status || 500).json({
     success: false,
     message: err.message || "Internal server error",
-    ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
+    ...(NODE_ENV === "development" && { stack: err.stack }),
   });
 });
 
-// SPA fallback route - serve React app for all non-API routes
-app.get("*", (req, res) => {
-  console.log(`📍 Route requested: ${req.method} ${req.path}`);
-  console.log(`🔍 Headers:`, req.headers);
+// MongoDB connection & server start
+const connectWithTimeout = () => Promise.race([
+  mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 5000, connectTimeoutMS: 5000 }),
+  new Promise((_, reject) => setTimeout(() => reject(new Error("MongoDB connection timeout")), 5000)),
+]);
 
-  // Don't interfere with API routes
-  if (req.path.startsWith("/api/")) {
-    console.log(`❌ API route not found: ${req.path}`);
-    return res.status(404).json({
-      success: false,
-      message: "API route not found",
-    });
-  }
-
-  // In development, redirect to Vite dev server
-  if (process.env.NODE_ENV !== "production") {
-    const redirectUrl = `${process.env.CLIENT_URL || "http://localhost:8080"}${req.path}`;
-    console.log(`🔄 Redirecting to frontend: ${redirectUrl}`);
-    return res.redirect(redirectUrl);
-  }
-
-  // In production, serve the React app
-  const buildPath = path.join(__dirname, "../dist");
-  console.log(`📁 Serving React app from: ${buildPath}`);
-  res.sendFile(path.join(buildPath, "index.html"));
-});
-
-// Start server function
 const startServer = () => {
   server.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
-    console.log(
-      `🌐 Client URL: ${process.env.CLIENT_URL || "http://localhost:5173"}`,
-    );
-  });
-};
-
-// Connect to MongoDB with timeout
-const connectWithTimeout = async () => {
-  const timeout = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error("MongoDB connection timeout")), 5000),
-  );
-
-  const connection = mongoose.connect(MONGODB_URI, {
-    serverSelectionTimeoutMS: 5000,
-    connectTimeoutMS: 5000,
+    console.log(`🌐 Client URL: ${CLIENT_URL}`);
+    console.log(`📡 Socket.IO ready`);
+    robotCommManager.initialize()
+      .then(() => console.log("🤖 Robot communication initialized"))
+      .catch(err => console.error("❌ Robot communication failed:", err));
   });
 
-  return Promise.race([connection, timeout]);
+  setupSocketHandlers(io, robotCommManager);
 };
 
 connectWithTimeout()
@@ -213,28 +199,24 @@ connectWithTimeout()
     console.log("✅ Connected to MongoDB");
     startServer();
   })
-  .catch((err) => {
-    console.warn("⚠️  MongoDB connection failed:", err.message);
-    console.log("🔄 Starting in demo mode without database...");
-
-    // Mock mongoose connection for demo mode
+  .catch(err => {
+    console.warn("⚠️ MongoDB failed:", err.message);
+    console.log("🔄 Starting in demo mode...");
     global.demoMode = true;
     startServer();
   });
 
 // Graceful shutdown
-process.on("SIGTERM", () => {
-  console.log("🛑 SIGTERM received, shutting down gracefully...");
+const shutdown = () => {
+  console.log("🛑 Shutting down gracefully...");
   server.close(() => {
     mongoose.connection.close();
+    robotCommManager.disconnect();
     process.exit(0);
   });
-});
+};
 
-process.on("SIGINT", () => {
-  console.log("🛑 SIGINT received, shutting down gracefully...");
-  server.close(() => {
-    mongoose.connection.close();
-    process.exit(0);
-  });
-});
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
+
+export { io, robotCommManager };

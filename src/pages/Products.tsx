@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs,  TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link, useNavigate } from "react-router-dom"; // Import useNavigate
 import { useCartStore } from "@/store/cartStore";
 import ShoppingCart from "@/components/ShoppingCart";
@@ -26,9 +26,9 @@ import {
   Filter,
   ShoppingCartIcon,
   Heart,
-  Share2,
+ // Share2,
   Truck,
-  RotateCcw,
+ // RotateCcw,
   PlusCircle, // Import PlusCircle icon for "Add New Product"
   Edit, // Import Edit icon for update
   Trash2, // Import Trash2 icon for delete
