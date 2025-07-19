@@ -33,13 +33,12 @@ export async function sendOTP(email, otp) {
       pass: process.env.SMTP_PASS,
     },
   });
-
-  const mailOptions = {
-    from: `"Techligence Pvt. Ltd." <${process.env.SMTP_USER}>`,
-    to: email,
-    subject: " One Time password for you  Payment",
-    text: `Thank you for showing your interest . Use the following OTP to verify your identity: ${otp}. Do not share this code with anyone.  `,
-  };
+const mailOptions = {
+  from: `"Techligence Pvt. Ltd." <${process.env.SMTP_USER}>`,
+  to: email,
+  subject: " One Time password for your  Payment",
+  text: `Thank you for showing your interest . Use the following OTP to verify your identity: ${otp}. Do not share this code with anyone.  `,
+};
 
   try {
     const info = await transporter.sendMail(mailOptions);
