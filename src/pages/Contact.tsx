@@ -110,7 +110,7 @@ const Contact = () => {
     {
       icon: Mail,
       title: "Email Us",
-      details: "piyushshinde@techligence.net",
+      details: "info@techligence.net",
       description: "Send us an email anytime",
     },
     {

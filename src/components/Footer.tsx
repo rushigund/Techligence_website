@@ -81,7 +81,7 @@ const Footer = () => {
                     href="mailto:hello@techligence.com"
                     className="hover:text-primary transition-colors"
                   >
-                    hello@techligence.com
+                    info@techligence.net
                   </a>
                 </div>
                 <div className="flex items-center gap-3">
@@ -90,15 +90,15 @@ const Footer = () => {
                     href="tel:+15551234567"
                     className="hover:text-primary transition-colors"
                   >
-                    +1 (555) 123-4567
+                    +91 70208 12247
                   </a>
                 </div>
                 <div className="flex items-start gap-3">
                   <MapPin className="w-4 h-4 text-primary mt-0.5" />
                   <span className="text-muted-foreground">
-                    123 Tech Boulevard
+                    Saptagiri Building, Lokdhara Phase 3,
                     <br />
-                    San Francisco, CA 94105
+                    Near Ganesh Nagar, Kalyan, Maharashtra, 421306
                   </span>
                 </div>
               </div>
