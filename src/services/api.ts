@@ -1,3 +1,4 @@
+// api.ts
 import axios from "axios";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
@@ -183,4 +184,23 @@ export const careerAPI = {
 export const chatbotAPI = {
   sendMessage: (message: string) =>
     apiCall(() => api.post("/chatbot/message", { message })),
+};
+
+// NEW: OTP API
+export const otpAPI = {
+  send: (email: string) =>
+    apiCall(() => api.post("/otp/send", { email })),
+  verify: (email: string, otp: string) =>
+    apiCall(() => api.post("/otp/verify", { email, otp })),
+};
+
+// NEW: Payment API (Razorpay)
+export const paymentAPI = {
+  createOrder: (amount: number) =>
+    apiCall(() => api.post("/payment/create-order", { amount })),
+  verifyPayment: (data: {
+    razorpay_order_id: string;
+    razorpay_payment_id: string;
+    razorpay_signature: string;
+  }) => apiCall(() => api.post("/payment/verify", data)),
 };
