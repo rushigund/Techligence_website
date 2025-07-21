@@ -2,6 +2,7 @@ import express from "express";
 import { body, validationResult } from "express-validator";
 import Product from "../models/Products.js"; // Adjust path to your Product Mongoose model
 import { authenticateToken, authorizeRoles } from "../middleware/auth.js"; // Your authentication and authorization middleware
+import { updateSingleContentItem } from "../utils/contentIngestor.js"; // NEW: Import contentIngestor for RAG updates
 
 const router = express.Router();
 
@@ -61,7 +62,13 @@ router.post(
     // Validation rules for each field based on your productSchema
     body("productId")
       .isNumeric().withMessage("Product ID must be a number")
-      .notEmpty().withMessage("Product ID is required"),
+      .notEmpty().withMessage("Product ID is required")
+      .custom(async (value) => { // Custom validation to check for existing productId
+        const existingProduct = await Product.findOne({ productId: value });
+        if (existingProduct) {
+          throw new Error("Product with this ID already exists.");
+        }
+      }),
     body("name").notEmpty().withMessage("Product name is required"),
     body("description").notEmpty().withMessage("Description is required"),
     body("price").notEmpty().withMessage("Price is required"),
@@ -91,14 +98,11 @@ router.post(
     }
 
     try {
-      // Check if product with this productId already exists
-      const existingProduct = await Product.findOne({ productId: req.body.productId });
-      if (existingProduct) {
-        return res.status(409).json({ success: false, message: "Product with this ID already exists." });
-      }
-
       const newProduct = new Product(req.body);
       await newProduct.save();
+
+      // NEW: Post-save hook for RAG
+      await updateSingleContentItem('product', newProduct, 'upsert');
 
       res.status(201).json({
         success: true,
@@ -151,22 +155,23 @@ router.put(
       const { productId } = req.params;
       const updates = req.body;
 
-      // Ensure productId from params matches productId in body if present, or handle consistency
       if (updates.productId && updates.productId !== parseInt(productId)) {
         return res.status(400).json({ success: false, message: "Product ID in URL does not match ID in body." });
       }
-      // Remove productId from updates to prevent accidental changes if it's disabled on frontend for edit
       delete updates.productId;
 
       const updatedProduct = await Product.findOneAndUpdate(
-        { productId: parseInt(productId) }, // Query by productId from URL params
+        { productId: parseInt(productId) },
         updates,
-        { new: true, runValidators: true } // Return the updated document and run schema validators
+        { new: true, runValidators: true }
       );
 
       if (!updatedProduct) {
         return res.status(404).json({ success: false, message: "Product not found" });
       }
+
+      // NEW: Post-update hook for RAG
+      await updateSingleContentItem('product', updatedProduct, 'upsert');
 
       res.json({
         success: true,
@@ -194,6 +199,13 @@ router.delete(
       if (!deletedProduct) {
         return res.status(404).json({ success: false, message: "Product not found" });
       }
+
+      // NEW: Post-delete hook for RAG
+      // Note: As discussed, direct deletion by sourceId prefix is complex without knowing all chunk IDs.
+      // For now, this will log a warning. Rely on full re-ingestion for cleanup or implement
+      // a more sophisticated deletion strategy if needed.
+      await updateSingleContentItem('product', deletedProduct, 'delete');
+
 
       res.json({
         success: true,

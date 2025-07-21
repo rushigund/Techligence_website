@@ -35,12 +35,12 @@ const MediaPipeStatus = ({
   };
 
   const getStatusText = () => {
-    if (isLoading) return "Initializing...";
-    if (error && error.includes("fallback")) return "Fallback Mode";
-    if (error && error.includes("MediaPipe not available")) return "Demo Mode";
+    if (isLoading) return "Initializing MediaPipe...";
+    if (error && error.includes("MediaPipe not available"))
+      return "Fallback Camera Mode";
     if (error) return "Camera Error";
-    if (isInitialized) return "Hand Tracking Active";
-    return "Not Started";
+    if (isInitialized) return "MediaPipe Active";
+    return "Not Initialized";
   };
 
   const getStatusVariant = ():
@@ -81,18 +81,16 @@ const MediaPipeStatus = ({
       )}
 
       {/* Fallback Mode Alert */}
-      {error &&
-        (error.includes("fallback") ||
-          error.includes("MediaPipe not available")) && (
-          <Alert>
-            <Camera className="h-4 w-4" />
-            <AlertDescription>
-              <strong>Demo Mode:</strong> Using simulated gesture recognition
-              for demonstration. Real hand tracking with MediaPipe is also
-              available when the packages are properly loaded.
-            </AlertDescription>
-          </Alert>
-        )}
+      {error && error.includes("MediaPipe not available") && (
+        <Alert>
+          <Camera className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Fallback Mode:</strong> MediaPipe is not available. Using
+            basic camera for preview. Some gesture recognition features may be
+            limited.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Loading State */}
       {isLoading && (

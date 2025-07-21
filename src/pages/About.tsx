@@ -21,31 +21,31 @@ import {
 const About = () => {
   const teamMembers = [
     {
-      name: "Dr. Anya Sharma",
+      name: "Kunal Gawhale",
       role: "CEO & Co-founder",
       description:
         "A visionary in AI and robotics, leading Techligence with a passion for innovation and ethical technology.",
       image: "https://placehold.co/100x100/A0B9CE/FFFFFF?text=AS", // Placeholder image
     },
     {
-      name: "Mark Jensen",
-      role: "CTO & Co-founder",
+      name: "Piyush Shinde",
+      role: "HR Head & Co-founder",
       description:
-        "Expert in embedded systems and hardware design, driving the technical backbone of our robotic solutions.",
+        "Specialist in human resources and talent development, driving the people strategy and cultural foundation behind our organizational success.",
       image: "https://placehold.co/100x100/C0D9E0/FFFFFF?text=MJ", // Placeholder image
     },
     {
-      name: "Sarah Lee",
-      role: "Head of Research",
+      name: "Under Development",
+      role: "TBA",
       description:
-        "Pioneering new frontiers in human-robot interaction and advanced machine learning algorithms.",
+        "Under Development",
       image: "https://placehold.co/100x100/D0E9F0/FFFFFF?text=SL", // Placeholder image
     },
     {
-      name: "Michael Chen",
-      role: "Lead Software Engineer",
+      name: "Under Development",
+      role: "TBA",
       description:
-        "Architecting robust and scalable software platforms for our autonomous systems.",
+        "Under Development",
       image: "https://placehold.co/100x100/E0F9F5/FFFFFF?text=MC", // Placeholder image
     },
   ];

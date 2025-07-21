@@ -1,218 +1,55 @@
-// src/routes/careerRoutes.js
 import express from "express";
 import { body, validationResult } from "express-validator";
-import multer from "multer"; // For handling file uploads
-import nodemailer from "nodemailer"; // For sending emails
-import dotenv from "dotenv"; // To access environment variables
-import JobListing from "../models/JobListing.js"; // Corrected: Import JobListing model from its dedicated file
-import { authenticateToken, authorizeRoles } from "../middleware/auth.js"; // Your authentication and authorization middleware
-
-dotenv.config();
+import JobListing from "../models/JobListing.js"; // Adjust path to your JobListing Mongoose model
+import { authenticateToken, authorizeRoles } from "../middleware/auth.js"; // Import auth and authorize middleware
+import { updateSingleContentItem } from "../utils/contentIngestor.js"; // NEW: Import contentIngestor for RAG updates
+import multer from "multer"; // For handling file uploads (resumes)
+import { v4 as uuidv4 } from "uuid"; // For generating unique filenames
+import path from "path";
+import fs from "fs"; // For file system operations (deleting resumes)
 
 const router = express.Router();
 
-// Configure Multer for file uploads
-const storage = multer.memoryStorage(); // Store file in memory as a Buffer
-const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 10 * 1024 * 1024 // Increased limit to 10MB to accommodate resume + portfolio
-  },
-  fileFilter: (req, file, cb) => {
-    // Define allowed mimetypes for both resume and portfolio
-    const allowedResumeMimes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-    const allowedPortfolioMimes = ['application/pdf', 'application/zip', 'image/jpeg', 'image/png'];
+// --- Multer setup for resume uploads ---
+// Ensure a directory for uploads exists
+const uploadsDir = path.resolve(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
-    if (file.fieldname === "resume" && allowedResumeMimes.includes(file.mimetype)) {
-      cb(null, true);
-    } else if (file.fieldname === "portfolio" && allowedPortfolioMimes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error("Unsupported file type or field name."), false);
-    }
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadsDir); // Resumes will be stored in the 'uploads' directory
+  },
+  filename: (req, file, cb) => {
+    // Generate a unique filename to prevent collisions
+    const uniqueSuffix = uuidv4();
+    const fileExtension = path.extname(file.originalname);
+    cb(null, file.fieldname + '-' + uniqueSuffix + fileExtension);
   },
 });
 
-// POST /api/career/apply - Handle job application submission
-router.post(
-  "/career/apply",
-  // Use upload.fields to handle multiple file inputs (resume and portfolio)
-  upload.fields([
-    { name: 'resume', maxCount: 1 },
-    { name: 'portfolio', maxCount: 1 }
-  ]),
-  [
-    // Validation rules for all form fields sent from the frontend
-    body("firstName").notEmpty().withMessage("First Name is required"),
-    body("lastName").notEmpty().withMessage("Last Name is required"),
-    body("email").isEmail().withMessage("Valid Email is required"),
-    body("phone").notEmpty().withMessage("Phone Number is required"),
-    body("address").notEmpty().withMessage("Address is required"),
-    body("city").notEmpty().withMessage("City is required"),
-    body("state").notEmpty().withMessage("State is required"),
-    body("zipCode").notEmpty().withMessage("ZIP Code is required"),
-
-    body("currentTitle").optional().isString(),
-    body("currentCompany").optional().isString(),
-    body("totalExperience").notEmpty().withMessage("Total Experience is required"),
-    body("relevantExperience").notEmpty().withMessage("Relevant Experience is required"),
-    body("expectedSalary").optional().isString(),
-    body("noticePeriod").optional().isString(),
-
-    body("education").notEmpty().withMessage("Education Level is required"),
-    body("university").optional().isString(),
-    body("graduationYear").optional().isNumeric().withMessage("Graduation Year must be a number"),
-
-    body("coverLetter").notEmpty().withMessage("Cover Letter is required"),
-    body("whyJoin").notEmpty().withMessage("Why Join is required"),
-    body("availability").notEmpty().withMessage("Availability is required"),
-    body("relocate").isBoolean().withMessage("Relocate must be a boolean"),
-
-    body("jobTitle").notEmpty().withMessage("Job Title is required"),
-    body("jobDepartment").notEmpty().withMessage("Job Department is required"),
-    body("jobLocation").notEmpty().withMessage("Job Location is required"),
-  ],
-  async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      console.error("Backend Validation Errors:", errors.array()); // Log detailed errors
-      return res.status(400).json({ success: false, message: "Validation failed", errors: errors.array() });
-    }
-
-    // Corrected: Access files directly from req.files object
-    const resumeFile = req.files && req.files['resume'] ? req.files['resume'][0] : null;
-    const portfolioFile = req.files && req.files['portfolio'] ? req.files['portfolio'][0] : null;
-
-    if (!resumeFile) {
-      return res.status(400).json({ success: false, message: "Resume file is required." });
-    }
-
-    const {
-      firstName, lastName, email, phone, address, city, state, zipCode,
-      currentTitle, currentCompany, totalExperience, relevantExperience, expectedSalary, noticePeriod,
-      education, university, graduationYear,
-      coverLetter, whyJoin, availability, relocate,
-      jobTitle, jobDepartment, jobLocation
-    } = req.body;
-
-    const fullName = `${firstName} ${lastName}`; // Combine first and last name
-
-    // Nodemailer Setup
-    const transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST,
-      port: parseInt(process.env.EMAIL_PORT || '587'),
-      secure: process.env.EMAIL_SECURE === 'true',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: process.env.CAREER_RECEIVER_EMAIL || "careers@techligence.com", // Dedicated email for career applications
-      subject: `New Job Application: ${jobTitle} - ${fullName}`,
-      html: `
-        <p><strong>Job Title:</strong> ${jobTitle}</p>
-        <p><strong>Department:</strong> ${jobDepartment}</p>
-        <p><strong>Location:</strong> ${jobLocation}</p>
-        <br>
-        <h3>Personal Information:</h3>
-        <p><strong>Name:</strong> ${fullName}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Phone:</strong> ${phone}</p>
-        <p><strong>Address:</strong> ${address}, ${city}, ${state} ${zipCode}</p>
-        <br>
-        <h3>Professional Information:</h3>
-        <p><strong>Current Title:</strong> ${currentTitle || 'N/A'}</p>
-        <p><strong>Current Company:</strong> ${currentCompany || 'N/A'}</p>
-        <p><strong>Total Experience:</strong> ${totalExperience}</p>
-        <p><strong>Relevant Experience:</strong> ${relevantExperience}</p>
-        <p><strong>Expected Salary:</strong> ${expectedSalary || 'N/A'}</p>
-        <p><strong>Notice Period:</strong> ${noticePeriod || 'N/A'}</p>
-        <br>
-        <h3>Education:</h3>
-        <p><strong>Education Level:</strong> ${education}</p>
-        <p><strong>University:</strong> ${university || 'N/A'}</p>
-        <p><strong>Graduation Year:</strong> ${graduationYear || 'N/A'}</p>
-        <br>
-        <h3>Application Details:</h3>
-        <p><strong>Cover Letter:</strong></p>
-        <p>${coverLetter}</p>
-        <br>
-        <p><strong>Why Join Techligence:</strong></p>
-        <p>${whyJoin}</p>
-        <p><strong>Availability:</strong> ${availability}</p>
-        <p><strong>Willing to Relocate:</strong> ${relocate ? 'Yes' : 'No'}</p>
-        <br>
-        <p>Resume is attached.</p>
-        ${portfolioFile ? `<p>Portfolio is attached.</p>` : ''}
-      `,
-      attachments: [
-        {
-          filename: resumeFile.originalname,
-          content: resumeFile.buffer, // Use buffer if stored in memory
-          contentType: resumeFile.mimetype,
-        },
-        ...(portfolioFile ? [{ // Conditionally add portfolio attachment
-          filename: portfolioFile.originalname,
-          content: portfolioFile.buffer,
-          contentType: portfolioFile.mimetype,
-        }] : [])
-      ],
-    };
-
-    try {
-      await transporter.sendMail(mailOptions);
-      res.status(200).json({ success: true, message: "Your job application has been submitted successfully!" });
-    } catch (error) {
-      console.error("Error sending job application email:", error);
-      res.status(500).json({ success: false, message: "Failed to submit application. Please try again later." });
-    }
+// Filter for allowed file types (PDF, DOC, DOCX)
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype === 'application/pdf' ||
+      file.mimetype === 'application/msword' || // .doc
+      file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') { // .docx
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only PDF, DOC, and DOCX files are allowed.'), false);
   }
-);
+};
 
-// --- Admin-Only Route to Create a Job Listing ---
-// POST /api/career/jobs - Create a new job listing (Admin only)
-router.post(
-  "/career/jobs",
-  authenticateToken,
-  authorizeRoles('admin'), // Only admins can create job listings
-  [
-    body("title").notEmpty().withMessage("Job title is required"),
-    body("department").notEmpty().withMessage("Department is required"),
-    body("location").notEmpty().withMessage("Location is required"),
-    body("type").notEmpty().withMessage("Job type is required"),
-    body("salary").notEmpty().withMessage("Salary is required"),
-    body("description").notEmpty().withMessage("Description is required"),
-    body("skills").optional().isArray().withMessage("Skills must be an array of strings"),
-    body("skills.*").optional().isString().withMessage("Each skill must be a string"),
-    body("isActive").optional().isBoolean().withMessage("isActive must be a boolean"),
-  ],
-  async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      console.error("Backend Validation Errors (Create Job Listing):", errors.array());
-      return res.status(400).json({ success: false, message: "Validation failed", errors: errors.array() });
-    }
+const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB file size limit
+});
 
-    try {
-      const newJobListing = new JobListing(req.body);
-      await newJobListing.save();
 
-      res.status(201).json({
-        success: true,
-        message: "Job listing created successfully!",
-        data: newJobListing,
-      });
-    } catch (error) {
-      console.error("Error creating job listing:", error);
-      res.status(500).json({ success: false, message: "Failed to create job listing", error: error.message });
-    }
-  }
-);
+// --- Public Routes ---
 
-// GET /api/career/jobs - Get all job listings (Publicly accessible)
+// GET /api/career/jobs - Get all job listings
 router.get("/career/jobs", async (req, res) => {
   try {
     const jobListings = await JobListing.find({});
@@ -222,65 +59,157 @@ router.get("/career/jobs", async (req, res) => {
       data: jobListings,
     });
   } catch (error) {
-    console.error("Error fetching job listings:", error);
+    console.error("Error fetching all job listings:", error);
     res.status(500).json({ success: false, message: "Failed to fetch job listings", error: error.message });
   }
 });
 
-// NEW: GET /api/career/jobs/:id - Get a single job listing by ID (for admin editing)
-router.get(
-  "/career/jobs/:id",
-  authenticateToken,
-  authorizeRoles('admin'),
-  async (req, res) => {
-    try {
-      const { id } = req.params;
-      const jobListing = await JobListing.findById(id);
-
-      if (!jobListing) {
-        return res.status(404).json({ success: false, message: "Job listing not found." });
-      }
-
-      res.json({ success: true, message: "Job listing fetched successfully!", data: jobListing });
-    } catch (error) {
-      console.error("Error fetching job listing by ID:", error);
-      res.status(500).json({ success: false, message: "Failed to fetch job listing", error: error.message });
-    }
-  }
-);
-
-// NEW: PUT /api/career/jobs/:id - Update an existing job listing (Admin only)
-router.put(
-  "/career/jobs/:id",
-  authenticateToken,
-  authorizeRoles('admin'),
+// POST /api/career/apply - Submit a job application
+router.post(
+  "/career/apply",
+  upload.single('resume'), // 'resume' is the field name from the frontend
   [
-    body("title").optional().notEmpty().withMessage("Job title cannot be empty"),
-    body("department").optional().notEmpty().withMessage("Department cannot be empty"),
-    body("location").optional().notEmpty().withMessage("Location cannot be empty"),
-    body("type").optional().notEmpty().withMessage("Job type cannot be empty"),
-    body("salary").optional().notEmpty().withMessage("Salary cannot be empty"),
-    body("description").optional().notEmpty().withMessage("Description cannot be empty"),
-    body("skills").optional().isArray().withMessage("Skills must be an array of strings"),
-    body("skills.*").optional().isString().withMessage("Each skill must be a string"),
-    body("isActive").optional().isBoolean().withMessage("isActive must be a boolean"),
+    body("fullName").notEmpty().withMessage("Full name is required."),
+    body("email").isEmail().withMessage("Valid email is required."),
+    body("phone").notEmpty().withMessage("Phone number is required."),
+    body("jobTitle").notEmpty().withMessage("Job title is required."),
+    body("jobDepartment").notEmpty().withMessage("Job department is required."),
+    body("jobLocation").notEmpty().withMessage("Job location is required."),
+    // coverLetter is optional
   ],
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      console.error("Backend Validation Errors (Update Job Listing):", errors.array());
+      // If validation fails, and a file was uploaded, delete it
+      if (req.file) {
+        fs.unlink(req.file.path, (err) => {
+          if (err) console.error("Error deleting uploaded file after validation failure:", err);
+        });
+      }
+      return res.status(400).json({ success: false, message: "Validation failed", errors: errors.array() });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "Resume file is required." });
+    }
+
+    try {
+      // In a real application, you would save application details to a database
+      // and potentially store the resume file path, or upload to cloud storage.
+      const newApplication = {
+        fullName: req.body.fullName,
+        email: req.body.email,
+        phone: req.body.phone,
+        jobTitle: req.body.jobTitle,
+        jobDepartment: req.body.jobDepartment,
+        jobLocation: req.body.jobLocation,
+        coverLetter: req.body.coverLetter || "",
+        resumePath: req.file.path, // Store the path to the uploaded resume
+        submittedAt: new Date(),
+      };
+
+      console.log("New Job Application Received:", newApplication);
+      // Example: Save to a 'JobApplication' model or send to an HR system
+      // const savedApplication = await JobApplication.create(newApplication);
+
+      res.status(200).json({
+        success: true,
+        message: "Your job application has been submitted successfully!",
+        // data: savedApplication // Return saved application data if applicable
+      });
+    } catch (error) {
+      console.error("Error submitting job application:", error);
+      // If an error occurs after file upload, delete the file
+      if (req.file) {
+        fs.unlink(req.file.path, (err) => {
+          if (err) console.error("Error deleting uploaded file after submission error:", err);
+        });
+      }
+      res.status(500).json({ success: false, message: "Failed to submit application", error: error.message });
+    }
+  }
+);
+
+
+// --- Admin-Only Routes (for managing job listings) ---
+
+// POST /api/career/jobs - Add a new job listing (Admin only)
+router.post(
+  "/career/jobs",
+  authenticateToken,
+  authorizeRoles('admin'),
+  [
+    body("title").notEmpty().withMessage("Job title is required."),
+    body("department").notEmpty().withMessage("Department is required."),
+    body("location").notEmpty().withMessage("Location is required."),
+    body("type").notEmpty().withMessage("Job type is required."),
+    body("salary").notEmpty().withMessage("Salary is required."),
+    body("description").notEmpty().withMessage("Description is required."),
+    body("skills").isArray().withMessage("Skills must be an array."),
+    body("skills.*").notEmpty().withMessage("Each skill cannot be empty."),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
       return res.status(400).json({ success: false, message: "Validation failed", errors: errors.array() });
     }
 
     try {
-      const { id } = req.params;
-      const updatedJobListing = await JobListing.findByIdAndUpdate(id, req.body, { new: true, runValidators: true });
+      const newJob = new JobListing(req.body);
+      await newJob.save();
 
-      if (!updatedJobListing) {
+      // NEW: Post-save hook for RAG
+      await updateSingleContentItem('job_listing', newJob, 'upsert');
+
+      res.status(201).json({
+        success: true,
+        message: "Job listing added successfully!",
+        data: newJob,
+      });
+    } catch (error) {
+      console.error("Error adding job listing:", error);
+      res.status(500).json({ success: false, message: "Failed to add job listing", error: error.message });
+    }
+  }
+);
+
+// PUT /api/career/jobs/:jobId - Update a job listing (Admin only)
+router.put(
+  "/career/jobs/:jobId",
+  authenticateToken,
+  authorizeRoles('admin'),
+  [
+    body("title").optional().notEmpty().withMessage("Job title cannot be empty."),
+    body("department").optional().notEmpty().withMessage("Department cannot be empty."),
+    body("location").optional().notEmpty().withMessage("Location cannot be empty."),
+    body("type").optional().notEmpty().withMessage("Job type cannot be empty."),
+    body("salary").optional().notEmpty().withMessage("Salary cannot be empty."),
+    body("description").optional().notEmpty().withMessage("Description cannot be empty."),
+    body("skills").optional().isArray().withMessage("Skills must be an array."),
+    body("skills.*").optional().notEmpty().withMessage("Each skill cannot be empty."),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, message: "Validation failed", errors: errors.array() });
+    }
+
+    try {
+      const { jobId } = req.params;
+      const updatedJob = await JobListing.findByIdAndUpdate(jobId, req.body, { new: true, runValidators: true });
+
+      if (!updatedJob) {
         return res.status(404).json({ success: false, message: "Job listing not found." });
       }
 
-      res.json({ success: true, message: "Job listing updated successfully!", data: updatedJobListing });
+      // NEW: Post-update hook for RAG
+      await updateSingleContentItem('job_listing', updatedJob, 'upsert');
+
+      res.json({
+        success: true,
+        message: "Job listing updated successfully!",
+        data: updatedJob,
+      });
     } catch (error) {
       console.error("Error updating job listing:", error);
       res.status(500).json({ success: false, message: "Failed to update job listing", error: error.message });
@@ -288,21 +217,31 @@ router.put(
   }
 );
 
-// NEW: DELETE /api/career/jobs/:id - Delete a job listing (Admin only)
+// DELETE /api/career/jobs/:jobId - Delete a job listing (Admin only)
 router.delete(
-  "/career/jobs/:id",
+  "/career/jobs/:jobId",
   authenticateToken,
   authorizeRoles('admin'),
   async (req, res) => {
     try {
-      const { id } = req.params;
-      const deletedJobListing = await JobListing.findByIdAndDelete(id);
+      const { jobId } = req.params;
+      const deletedJob = await JobListing.findByIdAndDelete(jobId);
 
-      if (!deletedJobListing) {
+      if (!deletedJob) {
         return res.status(404).json({ success: false, message: "Job listing not found." });
       }
 
-      res.json({ success: true, message: "Job listing deleted successfully!", data: null });
+      // NEW: Post-delete hook for RAG
+      // Note: As discussed, direct deletion by sourceId prefix is complex without knowing all chunk IDs.
+      // For now, this will log a warning. Rely on full re-ingestion for cleanup or implement
+      // a more sophisticated deletion strategy if needed.
+      await updateSingleContentItem('job_listing', deletedJob, 'delete');
+
+      res.json({
+        success: true,
+        message: "Job listing deleted successfully!",
+        data: null,
+      });
     } catch (error) {
       console.error("Error deleting job listing:", error);
       res.status(500).json({ success: false, message: "Failed to delete job listing", error: error.message });

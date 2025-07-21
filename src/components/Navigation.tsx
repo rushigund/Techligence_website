@@ -38,13 +38,30 @@ import {
   Activity,
   Smile,
   Search,
+  LogOut, // Import LogOut icon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ShoppingCart from "./ShoppingCart";
+import { useAuth } from "@/context/AuthContext"; // Import useAuth hook
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const { isAuthenticated, logout, user } = useAuth(); // Get isAuthenticated, logout, and user from AuthContext
+  const navigate = useNavigate(); // Initialize useNavigate
+
+  // Handle logout functionality
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setIsOpen(false); // Close mobile menu if open
+      navigate("/auth"); // Redirect to auth page after logout
+    } catch (error) {
+      console.error("Logout failed:", error);
+      // Optionally show a toast error here
+    }
+  };
 
   // Navigation structure with dropdowns
   const navigationConfig = {
@@ -135,12 +152,7 @@ const Navigation = () => {
             description: "Learn about our mission and values",
             icon: Building,
           },
-          {
-            title: "Support Center",
-            href: "/support",
-            description: "Technical support and resources",
-            icon: Phone,
-          },
+          
         ],
       },
       robotlab: {
@@ -153,7 +165,7 @@ const Navigation = () => {
             items: [
               {
                 title: "R.T. Controller",
-                href: "https://robotmanipulator.vercel.app/",
+                href: "/controller",
                 description:
                   "Control robots with hand gestures and URDF uploads",
                 icon: Settings,
@@ -209,7 +221,7 @@ const Navigation = () => {
 
   const isActive = (href: string) => {
     // Controller should always stay highlighted as it's the main feature
-    if (href === "https://robotmanipulator.vercel.app/") {
+    if (href === "/controller") {
       return true;
     }
 
@@ -493,18 +505,27 @@ const Navigation = () => {
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
             <ShoppingCart />
-            <Link to="/auth">
-              <Button variant="ghost" size="sm" className="gap-2">
-                <User className="h-4 w-4" />
-                Account
-              </Button>
-            </Link>
-            <Link to="/auth">
-              <Button size="sm" className="gap-2">
-                <LogIn className="h-4 w-4" />
-                Sign In
-              </Button>
-            </Link>
+            {isAuthenticated ? (
+              <>
+                
+                  <Button variant="ghost" size="sm" className="gap-2">
+                    <User className="h-4 w-4" />
+                    {user?.firstName || "Account"} {/* Display user's first name */}
+                  </Button>
+                
+                <Button onClick={handleLogout} size="sm" className="gap-2">
+                  <LogOut className="h-4 w-4" />
+                  Sign Out
+                </Button>
+              </>
+            ) : (
+              <Link to="/auth">
+                <Button size="sm" className="gap-2">
+                  <LogIn className="h-4 w-4" />
+                  Sign In
+                </Button>
+              </Link>
+            )}
           </div>
 
           {/* Mobile Menu */}
@@ -560,21 +581,30 @@ const Navigation = () => {
 
                 <hr className="my-4" />
 
-                <Link to="/auth" onClick={() => setIsOpen(false)}>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start gap-2"
-                  >
-                    <User className="h-4 w-4" />
-                    Account
-                  </Button>
-                </Link>
-                <Link to="/auth" onClick={() => setIsOpen(false)}>
-                  <Button className="w-full justify-start gap-2">
-                    <LogIn className="h-4 w-4" />
-                    Sign In
-                  </Button>
-                </Link>
+                {isAuthenticated ? (
+                  <>
+                   
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start gap-2"
+                      >
+                        <User className="h-4 w-4" />
+                        {user?.firstName || "Account"} {/* Display user's first name */}
+                      </Button>
+                    
+                    <Button onClick={handleLogout} className="w-full justify-start gap-2">
+                      <LogOut className="h-4 w-4" />
+                      Sign Out
+                    </Button>
+                  </>
+                ) : (
+                  <Link to="/auth" onClick={() => setIsOpen(false)}>
+                    <Button className="w-full justify-start gap-2">
+                      <LogIn className="h-4 w-4" />
+                      Sign In
+                    </Button>
+                  </Link>
+                )}
               </div>
             </SheetContent>
           </Sheet>

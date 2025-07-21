@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Loader2, PlusCircle, Save } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext"; // Corrected import path for AuthContext
+import { useAuth } from "@/context/AuthContext"; // Corrected import path for AuthContext
 import { blogAPI } from "@/services/api"; // Import blogAPI
 
 // Define the type for blog post data
@@ -47,7 +47,7 @@ const NewBlogPostPage = () => {
     excerpt: "",
     author: "",
     authorRole: "",
-    publishedDate: new Date().toISOString().split("T")[0], // Default to today's date
+    publishedDate: new Date().toISOString().split('T')[0], // Default to today's date
     readTime: "",
     category: "",
     image: "",
@@ -95,9 +95,7 @@ const NewBlogPostPage = () => {
               excerpt: postData.excerpt,
               author: postData.author,
               authorRole: postData.authorRole,
-              publishedDate: new Date(postData.publishedDate)
-                .toISOString()
-                .split("T")[0], // Format date for input
+              publishedDate: new Date(postData.publishedDate).toISOString().split('T')[0], // Format date for input
               readTime: postData.readTime,
               category: postData.category,
               image: postData.image,
@@ -107,22 +105,12 @@ const NewBlogPostPage = () => {
               content: postData.content,
             });
           } else {
-            throw new Error(
-              response.data.message || "Failed to fetch blog post.",
-            );
+            throw new Error(response.data.message || "Failed to fetch blog post.");
           }
         } catch (err: any) {
           console.error("Error fetching blog post:", err);
-          setError(
-            err.response?.data?.message ||
-              err.message ||
-              "Failed to load blog post for editing.",
-          );
-          toast.error(
-            err.response?.data?.message ||
-              err.message ||
-              "Failed to load blog post.",
-          );
+          setError(err.response?.data?.message || err.message || "Failed to load blog post for editing.");
+          toast.error(err.response?.data?.message || err.message || "Failed to load blog post.");
           navigate("/blog"); // Redirect if post not found or error
         } finally {
           setIsLoadingPost(false);
@@ -133,13 +121,10 @@ const NewBlogPostPage = () => {
     fetchBlogPost();
   }, [isEditMode, postId, navigate]);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     // Correctly handle checkbox 'checked' property
-    const inputValue =
-      type === "checkbox" ? (e.target as HTMLInputElement).checked : value;
+    const inputValue = type === "checkbox" ? (e.target as HTMLInputElement).checked : value;
 
     setFormData((prev) => ({
       ...prev,
@@ -161,16 +146,7 @@ const NewBlogPostPage = () => {
 
     try {
       // Basic validation
-      if (
-        !formData.title ||
-        !formData.excerpt ||
-        !formData.author ||
-        !formData.category ||
-        !formData.readTime ||
-        !formData.image ||
-        !formData.content ||
-        formData.postId === null
-      ) {
+      if (!formData.title || !formData.excerpt || !formData.author || !formData.category || !formData.readTime || !formData.image || !formData.content || formData.postId === null) {
         throw new Error("Please fill in all required fields.");
       }
       if (formData.likes < 0 || formData.comments < 0) {
@@ -190,17 +166,14 @@ const NewBlogPostPage = () => {
       }
 
       if (response.data.success) {
-        toast.success(
-          `Blog post ${isEditMode ? "updated" : "added"} successfully!`,
-        );
-        setFormData({
-          // Reset form after successful submission
+        toast.success(`Blog post ${isEditMode ? "updated" : "added"} successfully!`);
+        setFormData({ // Reset form after successful submission
           postId: null,
           title: "",
           excerpt: "",
           author: "",
           authorRole: "",
-          publishedDate: new Date().toISOString().split("T")[0],
+          publishedDate: new Date().toISOString().split('T')[0],
           readTime: "",
           category: "",
           image: "",
@@ -211,26 +184,12 @@ const NewBlogPostPage = () => {
         });
         navigate("/blog"); // Redirect to blog list page
       } else {
-        throw new Error(
-          response.data.message ||
-            `Failed to ${isEditMode ? "update" : "add"} blog post.`,
-        );
+        throw new Error(response.data.message || `Failed to ${isEditMode ? "update" : "add"} blog post.`);
       }
     } catch (err: any) {
-      console.error(
-        `Failed to ${isEditMode ? "update" : "add"} blog post:`,
-        err,
-      );
-      setError(
-        err.response?.data?.message ||
-          err.message ||
-          `Failed to ${isEditMode ? "update" : "add"} blog post. Please try again.`,
-      );
-      toast.error(
-        err.response?.data?.message ||
-          err.message ||
-          `Failed to ${isEditMode ? "update" : "add"} blog post.`,
-      );
+      console.error(`Failed to ${isEditMode ? "update" : "add"} blog post:`, err);
+      setError(err.response?.data?.message || err.message || `Failed to ${isEditMode ? "update" : "add"} blog post. Please try again.`);
+      toast.error(err.response?.data?.message || err.message || `Failed to ${isEditMode ? "update" : "add"} blog post.`);
     } finally {
       setIsSubmitting(false);
     }
@@ -241,9 +200,7 @@ const NewBlogPostPage = () => {
       <div className="flex justify-center items-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <p className="ml-2 text-muted-foreground">
-          {authLoading
-            ? "Loading authentication status..."
-            : "Loading blog post data..."}
+          {authLoading ? "Loading authentication status..." : "Loading blog post data..."}
         </p>
       </div>
     );
@@ -261,27 +218,20 @@ const NewBlogPostPage = () => {
             {isEditMode ? "Edit Blog Post" : "Create New Blog Post"}
           </CardTitle>
           <p className="text-center text-muted-foreground">
-            {isEditMode
-              ? "Modify the details of this blog post."
-              : "Fill in the details to create a new blog post."}
+            {isEditMode ? "Modify the details of this blog post." : "Fill in the details to create a new blog post."}
           </p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
-              <div
-                className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
-                role="alert"
-              >
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
                 <strong className="font-bold">Error!</strong>
                 <span className="block sm:inline ml-2">{error}</span>
               </div>
             )}
 
             {/* Basic Information */}
-            <h3 className="text-xl font-semibold mb-4 border-b pb-2">
-              Post Details
-            </h3>
+            <h3 className="text-xl font-semibold mb-4 border-b pb-2">Post Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="postId">Post ID</Label>
@@ -369,11 +319,7 @@ const NewBlogPostPage = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="category">Category</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={handleSelectChange}
-                  required
-                >
+                <Select value={formData.category} onValueChange={handleSelectChange} required>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
@@ -436,9 +382,7 @@ const NewBlogPostPage = () => {
             </div>
 
             {/* Full Content */}
-            <h3 className="text-xl font-semibold mb-4 border-b pb-2 mt-8">
-              Full Content
-            </h3>
+            <h3 className="text-xl font-semibold mb-4 border-b pb-2 mt-8">Full Content</h3>
             <div className="space-y-2">
               <Label htmlFor="content">Blog Post Content (Markdown/HTML)</Label>
               <Textarea
@@ -452,12 +396,7 @@ const NewBlogPostPage = () => {
               />
             </div>
 
-            <Button
-              type="submit"
-              className="w-full gap-2 mt-8"
-              size="lg"
-              disabled={isSubmitting}
-            >
+            <Button type="submit" className="w-full gap-2 mt-8" size="lg" disabled={isSubmitting}>
               {isSubmitting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : isEditMode ? (
@@ -465,13 +404,7 @@ const NewBlogPostPage = () => {
               ) : (
                 <PlusCircle className="w-5 h-5" />
               )}
-              {isSubmitting
-                ? isEditMode
-                  ? "Updating Post..."
-                  : "Creating Post..."
-                : isEditMode
-                  ? "Update Post"
-                  : "Create Post"}
+              {isSubmitting ? (isEditMode ? "Updating Post..." : "Creating Post...") : (isEditMode ? "Update Post" : "Create Post")}
             </Button>
           </form>
         </CardContent>

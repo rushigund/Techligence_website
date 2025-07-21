@@ -6,7 +6,7 @@ import path from "path";
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
-    port: 8080,
+    port: 8081,
     proxy: {
       "/api": {
         target: "http://localhost:5000",
@@ -25,12 +25,5 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
-  },
-  optimizeDeps: {
-    include: [
-      "@mediapipe/hands",
-      "@mediapipe/camera_utils",
-      "@mediapipe/drawing_utils",
-    ],
   },
 }));

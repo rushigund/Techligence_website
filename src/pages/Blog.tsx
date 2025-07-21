@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom"; // Import useNavigate
 import {
   Search,
   Calendar,
@@ -27,143 +27,72 @@ import {
   Heart,
   Share2,
   Filter,
+  Loader2, // Import Loader2 for loading state
+  Edit, // Import Edit icon
+  Trash2, // Import Trash2 icon
+  PlusCircle, // For "Add New Post" button
 } from "lucide-react";
+import { toast } from "sonner";
+import { useQuery, useQueryClient } from "@tanstack/react-query"; // Import useQueryClient
+import { blogAPI } from "@/services/api"; // Import blogAPI
+import { useAuth } from "@/context/AuthContext"; // Import useAuth
+
+// Define interface for BlogPost to match backend schema
+interface BlogPost {
+  postId: number;
+  title: string;
+  excerpt: string;
+  author: string;
+  authorRole: string;
+  publishedDate: string; // Will be a string from backend, convert to Date for formatting
+  readTime: string;
+  category: string;
+  image: string; // Emoji or URL
+  likes: number;
+  comments: number;
+  featured: boolean;
+  content: string; // Full content
+}
 
 const Blog = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const navigate = useNavigate();
+  const queryClient = useQueryClient(); // Get query client for invalidation
+  const { user, isAuthenticated } = useAuth(); // Get user and isAuthenticated from AuthContext
 
+  // Determine if the current user is an admin
+  const isAdmin = isAuthenticated && user?.role === "admin";
+
+  // Fetch blog posts using react-query
+  const { data: fetchedBlogPosts, isLoading, isError, error } = useQuery<BlogPost[], Error>({
+    queryKey: ["blogPosts"],
+    queryFn: async () => {
+      const response = await blogAPI.getBlogPosts();
+      if (response.data.success) {
+        return response.data.data;
+      } else {
+        throw new Error(response.data.message || "Failed to fetch blog posts.");
+      }
+    },
+  });
+
+  const allPosts = fetchedBlogPosts || [];
+  const featuredPosts = allPosts.filter(post => post.featured);
+  const regularPosts = allPosts.filter(post => !post.featured);
+
+  // Update categories counts dynamically based on fetched data
   const categories = [
-    { id: "all", name: "All Posts", count: 24 },
-    { id: "robotics", name: "Robotics", count: 12 },
-    { id: "ai", name: "Artificial Intelligence", count: 8 },
-    { id: "technology", name: "Technology", count: 6 },
-    { id: "tutorials", name: "Tutorials", count: 5 },
-    { id: "industry", name: "Industry News", count: 4 },
-    { id: "innovation", name: "Innovation", count: 3 },
+    { id: "all", name: "All Posts", count: allPosts.length },
+    { id: "robotics", name: "Robotics", count: allPosts.filter(p => p.category === "robotics").length },
+    { id: "ai", name: "Artificial Intelligence", count: allPosts.filter(p => p.category === "ai").length },
+    { id: "technology", name: "Technology", count: allPosts.filter(p => p.category === "technology").length },
+    { id: "tutorials", name: "Tutorials", count: allPosts.filter(p => p.category === "tutorials").length },
+    { id: "industry", name: "Industry News", count: allPosts.filter(p => p.category === "industry").length },
+    { id: "innovation", name: "Innovation", count: allPosts.filter(p => p.category === "innovation").length },
   ];
 
-  const featuredPosts = [
-    {
-      id: 1,
-      title: "The Future of Autonomous Robotics in Manufacturing",
-      excerpt:
-        "Exploring how autonomous robots are revolutionizing manufacturing processes and increasing efficiency by 300%.",
-      author: "Dr. Sarah Chen",
-      authorRole: "Lead Robotics Engineer",
-      publishedDate: "2024-01-15",
-      readTime: "8 min read",
-      category: "robotics",
-      image: "🤖",
-      likes: 245,
-      comments: 18,
-      featured: true,
-    },
-    {
-      id: 2,
-      title: "Machine Learning in Robot Navigation: A Deep Dive",
-      excerpt:
-        "Understanding how modern robots use ML algorithms to navigate complex environments safely and efficiently.",
-      author: "Alex Rodriguez",
-      authorRole: "AI Research Scientist",
-      publishedDate: "2024-01-12",
-      readTime: "12 min read",
-      category: "ai",
-      image: "🧠",
-      likes: 189,
-      comments: 24,
-      featured: true,
-    },
-  ];
-
-  const blogPosts = [
-    {
-      id: 3,
-      title: "Getting Started with URDF: Robot Description Files",
-      excerpt:
-        "A comprehensive guide to creating and managing URDF files for robot modeling and simulation.",
-      author: "Mike Johnson",
-      authorRole: "Software Developer",
-      publishedDate: "2024-01-10",
-      readTime: "6 min read",
-      category: "tutorials",
-      image: "📋",
-      likes: 156,
-      comments: 12,
-    },
-    {
-      id: 4,
-      title: "Industry 4.0: How Robotics is Shaping Smart Factories",
-      excerpt:
-        "Examining the role of robotics in the fourth industrial revolution and smart manufacturing.",
-      author: "Emma Wilson",
-      authorRole: "Industry Analyst",
-      publishedDate: "2024-01-08",
-      readTime: "10 min read",
-      category: "industry",
-      image: "🏭",
-      likes: 203,
-      comments: 31,
-    },
-    {
-      id: 5,
-      title: "Computer Vision in Robotics: Real-World Applications",
-      excerpt:
-        "Exploring how computer vision technologies enable robots to see and understand their environment.",
-      author: "David Kim",
-      authorRole: "Computer Vision Engineer",
-      publishedDate: "2024-01-05",
-      readTime: "9 min read",
-      category: "technology",
-      image: "👁️",
-      likes: 178,
-      comments: 15,
-    },
-    {
-      id: 6,
-      title: "Building Your First Robot Controller with ROS",
-      excerpt:
-        "Step-by-step tutorial on creating a robot controller using the Robot Operating System (ROS).",
-      author: "Lisa Park",
-      authorRole: "Robotics Developer",
-      publishedDate: "2024-01-03",
-      readTime: "15 min read",
-      category: "tutorials",
-      image: "⚙️",
-      likes: 312,
-      comments: 42,
-    },
-    {
-      id: 7,
-      title: "The Ethics of AI in Robotics: Challenges and Solutions",
-      excerpt:
-        "Discussing the ethical implications of artificial intelligence in robotics and potential solutions.",
-      author: "Dr. Robert Taylor",
-      authorRole: "Ethics in AI Researcher",
-      publishedDate: "2024-01-01",
-      readTime: "11 min read",
-      category: "ai",
-      image: "⚖️",
-      likes: 267,
-      comments: 38,
-    },
-    {
-      id: 8,
-      title: "Collaborative Robots: Transforming Human-Robot Interaction",
-      excerpt:
-        "How collaborative robots (cobots) are changing the way humans and robots work together.",
-      author: "Jennifer Lee",
-      authorRole: "Human-Robot Interaction Specialist",
-      publishedDate: "2023-12-28",
-      readTime: "7 min read",
-      category: "innovation",
-      image: "🤝",
-      likes: 234,
-      comments: 19,
-    },
-  ];
-
-  const filteredPosts = blogPosts.filter((post) => {
+  const filteredPosts = regularPosts.filter((post) => {
     const matchesSearch = post.title
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
@@ -191,6 +120,48 @@ const Blog = () => {
     };
     return icons[category] || BookOpen;
   };
+
+  // Handle blog post update - navigate to edit page
+  const handleUpdateBlogPost = (postId: number) => {
+    navigate(`/admin/blog/edit/${postId}`); // Assuming a route like /admin/blog/edit/:postId
+  };
+
+  // Handle blog post delete
+  const handleDeleteBlogPost = async (postId: number) => {
+    if (window.confirm(`Are you sure you want to delete blog post with ID: ${postId}? This action cannot be undone.`)) {
+      try {
+        const response = await blogAPI.deleteBlogPost(postId);
+        if (response.data.success) {
+          toast.success(`Blog post ${postId} deleted successfully!`);
+          queryClient.invalidateQueries({ queryKey: ["blogPosts"] }); // Invalidate to refetch list
+        } else {
+          toast.error(response.data.message || `Failed to delete blog post ${postId}.`);
+        }
+      } catch (error: any) {
+        console.error("Delete blog post error:", error);
+        toast.error(error.response?.data?.message || "An error occurred during deletion.");
+      }
+    }
+  };
+
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="ml-2 text-muted-foreground">Loading blog posts...</p>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="text-center py-16 text-red-500">
+        <p>Error loading blog posts: {error?.message || "Unknown error"}</p>
+        <p>Please ensure your backend is running and accessible.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -229,6 +200,17 @@ const Blog = () => {
                 Filter
               </Button>
             </div>
+            {/* Admin-only Add New Post Button */}
+            {isAdmin && (
+              <div className="mt-8">
+                <Link to="/admin/blog/new"> {/* Assuming a route for adding new blog posts */}
+                  <Button size="lg" className="gap-2">
+                    <PlusCircle className="w-5 h-5" />
+                    Add New Blog Post
+                  </Button>
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -263,88 +245,113 @@ const Blog = () => {
       </section>
 
       {/* Featured Posts */}
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <Badge variant="outline" className="mb-4">
-              <TrendingUp className="w-3 h-3 mr-1" />
-              Featured Articles
-            </Badge>
-            <h2 className="text-3xl lg:text-4xl font-display font-bold mb-4">
-              Must-Read Posts
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Our most popular and insightful articles on robotics and
-              technology.
-            </p>
+      {featuredPosts.length > 0 && (
+        <section className="py-16">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <Badge variant="outline" className="mb-4">
+                <TrendingUp className="w-3 h-3 mr-1" />
+                Featured Articles
+              </Badge>
+              <h2 className="text-3xl lg:text-4xl font-display font-bold mb-4">
+                Must-Read Posts
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Our most popular and insightful articles on robotics and
+                technology.
+              </p>
+            </div>
+
+            <div className="grid lg:grid-cols-2 gap-8 mb-16">
+              {featuredPosts.map((post) => (
+                <Card
+                  key={post.postId}
+                  className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 group overflow-hidden"
+                >
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <Badge variant="secondary">Featured</Badge>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        {/* Admin-only Edit and Delete Buttons */}
+                        {isAdmin && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleUpdateBlogPost(post.postId)}
+                              className="h-8 w-8 text-blue-500 hover:bg-blue-50"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteBlogPost(post.postId)}
+                              className="h-8 w-8 text-red-500 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </>
+                        )}
+                        <div className="flex items-center gap-1">
+                          <Heart className="w-4 h-4" />
+                          {post.likes}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <MessageSquare className="w-4 h-4" />
+                          {post.comments}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-4xl mb-4">{post.image}</div>
+                    <CardTitle className="text-xl group-hover:text-primary transition-colors line-clamp-2">
+                      {post.title}
+                    </CardTitle>
+                    <CardDescription className="text-base leading-relaxed line-clamp-3">
+                      {post.excerpt}
+                    </CardDescription>
+                  </CardHeader>
+
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                          <User className="w-4 h-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{post.author}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {post.authorRole}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="text-right text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1 mb-1">
+                          <Calendar className="w-3 h-3" />
+                          {formatDate(post.publishedDate)}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {post.readTime}
+                        </div>
+                      </div>
+                    </div>
+
+                    <Link to={`/blog/${post.postId}`} className="w-full">
+                      <Button className="w-full mt-4 gap-2 group-hover:gap-3 transition-all">
+                        Read Article
+                        <ArrowRight className="w-4 h-4" />
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
-
-          <div className="grid lg:grid-cols-2 gap-8 mb-16">
-            {featuredPosts.map((post) => (
-              <Card
-                key={post.id}
-                className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 group overflow-hidden"
-              >
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <Badge variant="secondary">Featured</Badge>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Heart className="w-4 h-4" />
-                        {post.likes}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <MessageSquare className="w-4 h-4" />
-                        {post.comments}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="text-4xl mb-4">{post.image}</div>
-                  <CardTitle className="text-xl group-hover:text-primary transition-colors line-clamp-2">
-                    {post.title}
-                  </CardTitle>
-                  <CardDescription className="text-base leading-relaxed line-clamp-3">
-                    {post.excerpt}
-                  </CardDescription>
-                </CardHeader>
-
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                        <User className="w-4 h-4 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">{post.author}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {post.authorRole}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="text-right text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1 mb-1">
-                        <Calendar className="w-3 h-3" />
-                        {formatDate(post.publishedDate)}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {post.readTime}
-                      </div>
-                    </div>
-                  </div>
-
-                  <Button className="w-full mt-4 gap-2 group-hover:gap-3 transition-all">
-                    Read Article
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Blog Posts Grid */}
       <section className="py-16 bg-muted/30">
@@ -361,7 +368,7 @@ const Blog = () => {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredPosts.map((post) => (
               <Card
-                key={post.id}
+                key={post.postId}
                 className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 group"
               >
                 <CardHeader>
@@ -369,9 +376,32 @@ const Blog = () => {
                     <Badge variant="outline">
                       {categories.find((c) => c.id === post.category)?.name}
                     </Badge>
-                    <Button variant="ghost" size="sm" className="gap-1">
-                      <Share2 className="w-3 h-3" />
-                    </Button>
+                    <div className="flex items-center gap-2"> {/* Added flex container for buttons */}
+                      {/* Admin-only Edit and Delete Buttons */}
+                      {isAdmin && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleUpdateBlogPost(post.postId)}
+                            className="h-8 w-8 text-blue-500 hover:bg-blue-50"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteBlogPost(post.postId)}
+                            className="h-8 w-8 text-red-500 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </>
+                      )}
+                      <Button variant="ghost" size="sm" className="gap-1">
+                        <Share2 className="w-3 h-3" />
+                      </Button>
+                    </div>
                   </div>
 
                   <div className="text-3xl mb-4">{post.image}</div>
@@ -409,10 +439,12 @@ const Blog = () => {
                     </div>
                   </div>
 
-                  <Button variant="outline" className="w-full gap-2">
-                    Read More
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
+                  <Link to={`/blog/${post.postId}`} className="w-full">
+                    <Button variant="outline" className="w-full gap-2">
+                      Read More
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </Link>
                 </CardContent>
               </Card>
             ))}

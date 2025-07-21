@@ -1,3 +1,4 @@
+// context/AuthContext.tsx
 import React, {
   createContext,
   useContext,
@@ -6,31 +7,35 @@ import React, {
   ReactNode,
 } from "react";
 import { authAPI } from "@/services/api";
-import { socketService } from "@/services/socket";
 
 interface User {
   _id: string;
   firstName: string;
   lastName: string;
   email: string;
-  role: string;
+  role: "user" | "engineer" | "admin";
   isActive: boolean;
   lastLogin?: string;
   preferences?: {
-    theme: string;
-    gestureSettings: {
-      sensitivity: number;
-      smoothing: boolean;
-      detectionConfidence: number;
-      trackingConfidence: number;
-    };
+    theme: "light" | "dark" | "system";
   };
-  robotAccess: Array<{
-    robotId: string;
-    accessLevel: string;
-    grantedAt: string;
+  cart: Array<{
+    productId: number;
+    name: string;
+    price: string;
+    priceValue: number;
+    image?: string;
+    specifications: {
+      speed?: string;
+      payload?: string;
+      range?: string;
+      battery?: string;
+    };
+    quantity: number;
   }>;
-  urdfFiles: string[];
+  favorites: number[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface AuthContextType {
@@ -45,7 +50,7 @@ interface AuthContextType {
     password: string;
   }) => Promise<void>;
   logout: () => void;
-  updateProfile: (data: any) => Promise<void>;
+  updateProfile: (data: Partial<User>) => Promise<void>;
   changePassword: (
     currentPassword: string,
     newPassword: string,
@@ -57,7 +62,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
@@ -70,32 +75,34 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(
-    localStorage.getItem("auth_token"),
+    typeof window !== 'undefined' ? localStorage.getItem("auth_token") : null
   );
   const [loading, setLoading] = useState(true);
 
-  // Initialize auth state
   useEffect(() => {
     const initializeAuth = async () => {
-      const savedToken = localStorage.getItem("auth_token");
-      const savedUser = localStorage.getItem("user_data");
+      if (typeof window === 'undefined') {
+        setLoading(false);
+        return;
+      }
 
-      if (savedToken && savedUser) {
+      const savedToken = localStorage.getItem("auth_token");
+      
+      if (savedToken) {
         try {
           setToken(savedToken);
-          setUser(JSON.parse(savedUser));
-
-          // Verify token with server
+          
+          // Verify token with server and get current user data
           const response = await authAPI.getProfile();
-          setUser(response.data.data.user);
-
-          // Connect to Socket.IO
-          await socketService.connect(savedToken);
+          if (response.data.success) {
+            setUser(response.data.data.user);
+          } else {
+            throw new Error("Profile fetch failed");
+          }
         } catch (error) {
           console.error("Auth initialization failed:", error);
           // Clear invalid auth data
           localStorage.removeItem("auth_token");
-          localStorage.removeItem("user_data");
           setToken(null);
           setUser(null);
         }
@@ -109,21 +116,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string) => {
     try {
       const response = await authAPI.login({ email, password });
-      const { user: userData, token: authToken } = response.data.data;
-
-      // Save to localStorage
-      localStorage.setItem("auth_token", authToken);
-      localStorage.setItem("user_data", JSON.stringify(userData));
-
-      // Update state
-      setToken(authToken);
-      setUser(userData);
-
-      // Connect to Socket.IO
-      await socketService.connect(authToken);
+      if (response.data.success) {
+        const { user: userData, token: authToken } = response.data.data;
+        
+        localStorage.setItem("auth_token", authToken);
+        setToken(authToken);
+        setUser(userData);
+      } else {
+        throw new Error(response.data.message || "Login failed");
+      }
     } catch (error: any) {
       throw new Error(
-        error.response?.data?.message || "Login failed. Please try again.",
+        error.response?.data?.message || 
+        error.message ||
+        "Login failed. Please try again."
       );
     }
   };
@@ -136,54 +142,52 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }) => {
     try {
       const response = await authAPI.register(userData);
-      const { user: newUser, token: authToken } = response.data.data;
+      if (response.data.success) {
+        const { user: newUser, token: authToken } = response.data.data;
 
-      // Save to localStorage
-      localStorage.setItem("auth_token", authToken);
-      localStorage.setItem("user_data", JSON.stringify(newUser));
-
-      // Update state
-      setToken(authToken);
-      setUser(newUser);
-
-      // Connect to Socket.IO
-      await socketService.connect(authToken);
+        localStorage.setItem("auth_token", authToken);
+        setToken(authToken);
+        setUser(newUser);
+      } else {
+        throw new Error(response.data.message || "Registration failed");
+      }
     } catch (error: any) {
       throw new Error(
         error.response?.data?.message ||
-          "Registration failed. Please try again.",
+        error.message ||
+        "Registration failed. Please try again."
       );
     }
   };
 
-  const logout = () => {
-    // Call logout API (fire and forget)
-    authAPI.logout().catch(console.error);
-
-    // Clear local state
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("user_data");
-    setToken(null);
-    setUser(null);
-
-    // Disconnect Socket.IO
-    socketService.disconnect();
+  const logout = async () => {
+    try {
+      if (token) {
+        await authAPI.logout();
+      }
+    } catch (error) {
+      console.error("Logout API call failed:", error);
+    } finally {
+      localStorage.removeItem("auth_token");
+      setToken(null);
+      setUser(null);
+    }
   };
 
-  const updateProfile = async (data: any) => {
+  const updateProfile = async (data: Partial<User>) => {
     try {
       const response = await authAPI.updateProfile(data);
-      const updatedUser = response.data.data.user;
-
-      // Update localStorage
-      localStorage.setItem("user_data", JSON.stringify(updatedUser));
-
-      // Update state
-      setUser(updatedUser);
+      if (response.data.success) {
+        const updatedUser = response.data.data.user;
+        setUser(updatedUser);
+      } else {
+        throw new Error(response.data.message || "Profile update failed");
+      }
     } catch (error: any) {
       throw new Error(
         error.response?.data?.message ||
-          "Profile update failed. Please try again.",
+        error.message ||
+        "Profile update failed. Please try again."
       );
     }
   };
@@ -193,11 +197,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     newPassword: string,
   ) => {
     try {
-      await authAPI.changePassword({ currentPassword, newPassword });
+      const response = await authAPI.changePassword({ 
+        currentPassword, 
+        newPassword 
+      });
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Password change failed");
+      }
     } catch (error: any) {
       throw new Error(
         error.response?.data?.message ||
-          "Password change failed. Please try again.",
+        error.message ||
+        "Password change failed. Please try again."
       );
     }
   };

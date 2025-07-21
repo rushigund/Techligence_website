@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Loader2, PlusCircle, Save } from "lucide-react"; // Added Save icon
 import { useNavigate, useParams } from "react-router-dom"; // Added useParams
-import { useAuth } from "@/contexts/AuthContext"; // Corrected path from 'context' to 'contexts'
+import { useAuth } from "@/context/AuthContext";
 import { productsAPI } from "@/services/api"; // Import the productsAPI
 
 // Define the type for product data based on your schema
@@ -99,9 +99,7 @@ const NewProductPage = () => {
       if (isEditMode && productId) {
         setIsLoadingProduct(true);
         try {
-          const response = await productsAPI.getProductById(
-            parseInt(productId),
-          );
+          const response = await productsAPI.getProductById(parseInt(productId));
           if (response.data.success) {
             const productData = response.data.data;
             // Map fetched data to formData structure
@@ -123,22 +121,12 @@ const NewProductPage = () => {
               category: productData.category,
             });
           } else {
-            throw new Error(
-              response.data.message || "Failed to fetch product.",
-            );
+            throw new Error(response.data.message || "Failed to fetch product.");
           }
         } catch (err: any) {
           console.error("Error fetching product:", err);
-          setError(
-            err.response?.data?.message ||
-              err.message ||
-              "Failed to load product for editing.",
-          );
-          toast.error(
-            err.response?.data?.message ||
-              err.message ||
-              "Failed to load product.",
-          );
+          setError(err.response?.data?.message || err.message || "Failed to load product for editing.");
+          toast.error(err.response?.data?.message || err.message || "Failed to load product.");
           navigate("/products"); // Redirect if product not found or error
         } finally {
           setIsLoadingProduct(false);
@@ -149,9 +137,7 @@ const NewProductPage = () => {
     fetchProduct();
   }, [isEditMode, productId, navigate]); // Depend on isEditMode and productId
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     if (name.startsWith("specs.")) {
       const specKey = name.split(".")[1];
@@ -163,14 +149,9 @@ const NewProductPage = () => {
         },
       }));
     } else if (type === "number") {
-      // Handle empty string for number inputs to avoid NaN.
-      // For `productId`, an empty input should result in `null`.
-      // For other numeric fields like rating or stock, it should result in 0 or another default.
-      const numericValue =
-        value === "" ? (name === "productId" ? null : 0) : parseFloat(value);
       setFormData((prev) => ({
         ...prev,
-        [name]: numericValue,
+        [name]: parseFloat(value),
       }));
     } else {
       setFormData((prev) => ({
@@ -201,53 +182,37 @@ const NewProductPage = () => {
 
     try {
       // Basic validation
-      if (
-        !formData.name ||
-        !formData.description ||
-        !formData.price ||
-        !formData.category ||
-        formData.productId === null
-      ) {
+      if (!formData.name || !formData.description || !formData.price || !formData.category || formData.productId === null) {
         throw new Error("Please fill in all required fields.");
       }
-      if (
-        formData.stockCount < 0 ||
-        formData.rating < 0 ||
-        formData.reviews < 0
-      ) {
+      if (formData.stockCount < 0 || formData.rating < 0 || formData.reviews < 0) {
         throw new Error("Numeric values cannot be negative.");
       }
 
       // Process features string into an array
+      const processedFeatures = formData.features.join(", ").split(',').map(f => f.trim()).filter(f => f !== '');
       // Ensure price and originalPrice are clean strings before sending
-      const cleanPrice = formData.price.replace(/[$,]/g, "");
-      const cleanOriginalPrice = formData.originalPrice
-        ? formData.originalPrice.replace(/[$,]/g, "")
-        : undefined;
+      const cleanPrice = formData.price.replace(/[$,]/g, '');
+      const cleanOriginalPrice = formData.originalPrice ? formData.originalPrice.replace(/[$,]/g, '') : undefined;
 
       const dataToSend = {
         ...formData,
+        productId: formData.productId,
         price: cleanPrice,
         originalPrice: cleanOriginalPrice,
-        features: formData.features.filter((f) => f), // Filter out empty strings
+        features: processedFeatures,
       };
 
       let response;
       if (isEditMode && productId) {
-        response = await productsAPI.updateProduct(
-          parseInt(productId),
-          dataToSend,
-        );
+        response = await productsAPI.updateProduct(parseInt(productId), dataToSend);
       } else {
         response = await productsAPI.addProduct(dataToSend);
       }
 
       if (response.data.success) {
-        toast.success(
-          `Product ${isEditMode ? "updated" : "added"} successfully!`,
-        );
-        setFormData({
-          // Reset form after successful submission
+        toast.success(`Product ${isEditMode ? "updated" : "added"} successfully!`);
+        setFormData({ // Reset form after successful submission
           productId: null,
           name: "",
           description: "",
@@ -271,23 +236,12 @@ const NewProductPage = () => {
         });
         navigate("/products"); // Redirect to products page
       } else {
-        throw new Error(
-          response.data.message ||
-            `Failed to ${isEditMode ? "update" : "add"} product.`,
-        );
+        throw new Error(response.data.message || `Failed to ${isEditMode ? "update" : "add"} product.`);
       }
     } catch (err: any) {
       console.error(`Failed to ${isEditMode ? "update" : "add"} product:`, err);
-      setError(
-        err.response?.data?.message ||
-          err.message ||
-          `Failed to ${isEditMode ? "update" : "add"} product. Please try again.`,
-      );
-      toast.error(
-        err.response?.data?.message ||
-          err.message ||
-          `Failed to ${isEditMode ? "update" : "add"} product.`,
-      );
+      setError(err.response?.data?.message || err.message || `Failed to ${isEditMode ? "update" : "add"} product. Please try again.`);
+      toast.error(err.response?.data?.message || err.message || `Failed to ${isEditMode ? "update" : "add"} product.`);
     } finally {
       setIsSubmitting(false);
     }
@@ -299,9 +253,7 @@ const NewProductPage = () => {
       <div className="flex justify-center items-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <p className="ml-2 text-muted-foreground">
-          {authLoading
-            ? "Loading authentication status..."
-            : "Loading product data..."}
+          {authLoading ? "Loading authentication status..." : "Loading product data..."}
         </p>
       </div>
     );
@@ -320,27 +272,20 @@ const NewProductPage = () => {
             {isEditMode ? "Edit Product" : "Add New Product"}
           </CardTitle>
           <p className="text-center text-muted-foreground">
-            {isEditMode
-              ? "Modify the details of this product."
-              : "Fill in the details to add a new robot to your store."}
+            {isEditMode ? "Modify the details of this product." : "Fill in the details to add a new robot to your store."}
           </p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
-              <div
-                className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
-                role="alert"
-              >
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
                 <strong className="font-bold">Error!</strong>
                 <span className="block sm:inline ml-2">{error}</span>
               </div>
             )}
 
             {/* Basic Information */}
-            <h3 className="text-xl font-semibold mb-4 border-b pb-2">
-              Basic Information
-            </h3>
+            <h3 className="text-xl font-semibold mb-4 border-b pb-2">Basic Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="productId">Product ID</Label>
@@ -392,9 +337,7 @@ const NewProductPage = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="originalPrice">
-                  Original Price ($) (Optional)
-                </Label>
+                <Label htmlFor="originalPrice">Original Price ($) (Optional)</Label>
                 <Input
                   id="originalPrice"
                   name="originalPrice"
@@ -418,11 +361,7 @@ const NewProductPage = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="category">Category</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={handleSelectChange}
-                  required
-                >
+                <Select value={formData.category} onValueChange={handleSelectChange} required>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
@@ -464,9 +403,7 @@ const NewProductPage = () => {
             </div>
 
             {/* Specifications */}
-            <h3 className="text-xl font-semibold mb-4 border-b pb-2 mt-8">
-              Specifications
-            </h3>
+            <h3 className="text-xl font-semibold mb-4 border-b pb-2 mt-8">Specifications</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="specs.speed">Max Speed</Label>
@@ -515,9 +452,7 @@ const NewProductPage = () => {
             </div>
 
             {/* Features */}
-            <h3 className="text-xl font-semibold mb-4 border-b pb-2 mt-8">
-              Features
-            </h3>
+            <h3 className="text-xl font-semibold mb-4 border-b pb-2 mt-8">Features</h3>
             <div className="space-y-2">
               <Label htmlFor="features">Features (comma-separated)</Label>
               <Textarea
@@ -525,20 +460,16 @@ const NewProductPage = () => {
                 name="features"
                 placeholder="e.g., 360° LiDAR Mapping, AI Obstacle Avoidance, 12-Hour Battery Life"
                 value={formData.features.join(", ")}
-                onChange={(e) =>
-                  setFormData((prev) => ({
+                onChange={(e) => setFormData(prev => ({
                     ...prev,
-                    features: e.target.value.split(",").map((f) => f.trim()),
-                  }))
-                }
+                    features: e.target.value.split(',').map(f => f.trim())
+                }))}
                 rows={3}
               />
             </div>
 
             {/* Stock & Shipping */}
-            <h3 className="text-xl font-semibold mb-4 border-b pb-2 mt-8">
-              Stock & Shipping
-            </h3>
+            <h3 className="text-xl font-semibold mb-4 border-b pb-2 mt-8">Stock & Shipping</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -585,12 +516,7 @@ const NewProductPage = () => {
               </div>
             </div>
 
-            <Button
-              type="submit"
-              className="w-full gap-2 mt-8"
-              size="lg"
-              disabled={isSubmitting}
-            >
+            <Button type="submit" className="w-full gap-2 mt-8" size="lg" disabled={isSubmitting}>
               {isSubmitting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : isEditMode ? (
@@ -598,13 +524,7 @@ const NewProductPage = () => {
               ) : (
                 <PlusCircle className="w-5 h-5" />
               )}
-              {isSubmitting
-                ? isEditMode
-                  ? "Updating Product..."
-                  : "Adding Product..."
-                : isEditMode
-                  ? "Update Product"
-                  : "Add Product"}
+              {isSubmitting ? (isEditMode ? "Updating Product..." : "Adding Product...") : (isEditMode ? "Update Product" : "Add Product")}
             </Button>
           </form>
         </CardContent>

@@ -8,8 +8,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Link } from "react-router-dom";
-import JobApplicationForm from "@/components/JobApplicationForm";
+import { Link, useNavigate } from "react-router-dom"; // Import useNavigate
+import JobApplicationForm from '@/components/JobApplicationForm';
+import CreateJobListingForm from '@/components/CreateJobListingForm'; // Import CreateJobListingForm
 import {
   ArrowRight,
   MapPin,
@@ -20,67 +21,104 @@ import {
   Star,
   Building,
   ChevronRight,
+  PlusCircle,
+  Loader2,
+  Edit, // Import Edit icon
+  Trash2, // Import Trash2 icon
 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext"; // Import useAuth hook
+import { useQuery, useQueryClient } from "@tanstack/react-query"; // Import react-query hooks
+import { careerAPI } from "@/services/api"; // Import careerAPI
+import { toast } from "sonner"; // Import toast for notifications
+
+// Define interface for a job listing to match the Mongoose schema
+interface JobListing {
+  _id: string; // MongoDB ID
+  title: string;
+  department: string;
+  location: string;
+  type: string;
+  salary: string;
+  description: string;
+  skills: string[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 const Career = () => {
   const [isApplicationFormOpen, setIsApplicationFormOpen] = useState(false);
-  const [selectedJob, setSelectedJob] = useState<{
-    title: string;
-    department: string;
-    location: string;
-  } | null>(null);
+  const [selectedJob, setSelectedJob] = useState<JobListing | null>(null); // Use JobListing type
+  const [isCreateJobFormOpen, setIsCreateJobFormOpen] = useState(false); // State for create/edit job form
+  const [editingJobId, setEditingJobId] = useState<string | null>(null); // State for job ID being edited
 
-  const handleApplyClick = (job: (typeof jobOpenings)[0]) => {
-    setSelectedJob({
-      title: job.title,
-      department: job.department,
-      location: job.location,
-    });
+  const { user, isAuthenticated } = useAuth();
+  const isAdmin = isAuthenticated && user?.role === "admin";
+
+  const navigate = useNavigate(); // Initialize useNavigate
+  const queryClient = useQueryClient(); // Get query client for invalidation
+
+  // Use useQuery to fetch job listings from the backend
+  const { data: jobOpenings, isLoading, isError, error } = useQuery<JobListing[], Error>({
+    queryKey: ["jobListings"], // Unique key for this query
+    queryFn: async () => {
+      const response = await careerAPI.getJobListings();
+      if (response.data.success) {
+        // Filter for active jobs if not admin, otherwise show all
+        return isAdmin ? response.data.data : response.data.data.filter((job: JobListing) => job.isActive);
+      } else {
+        throw new Error(response.data.message || "Failed to fetch job listings.");
+      }
+    },
+    staleTime: 5 * 60 * 1000, // Data is considered fresh for 5 minutes
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    // Refetch when isAdmin changes to update visibility of active/inactive jobs
+    // This is handled implicitly by `queryKey` if `isAdmin` was part of it, but `useQuery`
+    // will re-run `queryFn` if `isAdmin` (from `useAuth`) changes and `queryKey` is stable.
+    // Explicit invalidation on auth state change would be more robust if needed.
+  });
+
+
+  const handleApplyClick = (job: JobListing) => {
+    setSelectedJob(job);
     setIsApplicationFormOpen(true);
   };
 
-  const jobOpenings = [
-    {
-      title: "Senior Robotics Engineer",
-      department: "Engineering",
-      location: "San Francisco, CA",
-      type: "Full-time",
-      salary: "$120k - $150k",
-      description:
-        "Lead the development of next-generation autonomous robotics systems.",
-      skills: ["ROS", "Python", "C++", "Machine Learning", "Computer Vision"],
-    },
-    {
-      title: "AI/ML Research Scientist",
-      department: "Research",
-      location: "Remote",
-      type: "Full-time",
-      salary: "$130k - $170k",
-      description:
-        "Research and develop AI algorithms for intelligent robot behavior.",
-      skills: ["PyTorch", "TensorFlow", "Computer Vision", "Deep Learning"],
-    },
-    {
-      title: "Frontend Developer",
-      department: "Software",
-      location: "New York, NY",
-      type: "Full-time",
-      salary: "$90k - $120k",
-      description:
-        "Build intuitive interfaces for robot control and monitoring systems.",
-      skills: ["React", "TypeScript", "Three.js", "UI/UX Design"],
-    },
-    {
-      title: "Hardware Engineer",
-      department: "Hardware",
-      location: "Austin, TX",
-      type: "Full-time",
-      salary: "$100k - $130k",
-      description:
-        "Design and optimize robotic hardware components and systems.",
-      skills: ["PCB Design", "Embedded Systems", "CAD", "Electronics"],
-    },
-  ];
+  const handleCreateJobClick = () => {
+    setEditingJobId(null); // Ensure we're in create mode
+    setIsCreateJobFormOpen(true);
+  };
+
+  const handleCloseCreateJobForm = () => {
+    setIsCreateJobFormOpen(false);
+    setEditingJobId(null); // Reset editingJobId when form closes
+    queryClient.invalidateQueries({ queryKey: ["jobListings"] }); // Invalidate to refetch updated job list
+  };
+
+  // Handle Edit Job Listing: Opens the CreateJobListingForm in edit mode
+  const handleEditJob = (jobId: string) => {
+    setEditingJobId(jobId); // Set the ID of the job to be edited
+    setIsCreateJobFormOpen(true); // Open the form
+    toast.info(`Opening form to edit job ID: ${jobId}`);
+  };
+
+  // Handle Delete Job Listing
+  const handleDeleteJob = async (jobId: string) => {
+    if (window.confirm("Are you sure you want to delete this job listing? This action cannot be undone.")) {
+      try {
+        const response = await careerAPI.deleteJobListing(jobId);
+        if (response.data.success) {
+          toast.success(response.data.message || "Job listing deleted successfully!");
+          queryClient.invalidateQueries({ queryKey: ["jobListings"] }); // Invalidate to refetch updated list
+        } else {
+          toast.error(response.data.message || "Failed to delete job listing.");
+        }
+      } catch (error: any) {
+        console.error("Error deleting job listing:", error);
+        toast.error(error.response?.data?.message || "An error occurred during deletion.");
+      }
+    }
+  };
 
   const benefits = [
     {
@@ -193,63 +231,127 @@ const Career = () => {
               Find your perfect role in our growing team. We're always looking
               for talented individuals who share our passion for robotics.
             </p>
+            {/* Admin button to create new job listing */}
+            {isAdmin && (
+              <div className="mt-8">
+                <Button size="lg" className="gap-2" onClick={handleCreateJobClick}>
+                  <PlusCircle className="w-5 h-5" />
+                  Create New Job Listing
+                </Button>
+              </div>
+            )}
           </div>
 
-          <div className="grid gap-6 max-w-4xl mx-auto">
-            {jobOpenings.map((job, index) => (
-              <Card
-                key={index}
-                className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 group"
-              >
-                <CardHeader>
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                    <div>
-                      <CardTitle className="text-xl group-hover:text-primary transition-colors">
-                        {job.title}
-                      </CardTitle>
-                      <CardDescription className="text-base mt-2">
-                        {job.description}
-                      </CardDescription>
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="ml-2 text-muted-foreground">Loading job openings...</p>
+            </div>
+          ) : isError ? (
+            <div className="text-center py-16 text-red-500">
+              <p>Error loading job openings: {error?.message || "Unknown error"}</p>
+              <p>Please ensure your backend is running and accessible.</p>
+            </div>
+          ) : (jobOpenings && jobOpenings.length > 0 ? (
+            <div className="grid gap-6 max-w-4xl mx-auto">
+              {jobOpenings.map((job) => ( // Removed index as key, using job._id
+                <Card
+                  key={job._id}
+                  className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 group"
+                >
+                  <CardHeader>
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                      <div>
+                        <CardTitle className="text-xl group-hover:text-primary transition-colors">
+                          {job.title}
+                        </CardTitle>
+                        <CardDescription className="text-base mt-2">
+                          {job.description}
+                        </CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {/* Admin Edit and Delete Buttons */}
+                        {isAdmin && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditJob(job._id)}
+                              className="h-8 w-8 text-blue-500 hover:bg-blue-50"
+                              title="Edit Job Listing"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteJob(job._id)}
+                              className="h-8 w-8 text-red-500 hover:bg-red-50"
+                              title="Delete Job Listing"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </>
+                        )}
+                        <Button
+                          className="gap-2"
+                          onClick={() => handleApplyClick(job)}
+                        >
+                          Apply Now
+                          <ChevronRight className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <Button
-                      className="gap-2 shrink-0"
-                      onClick={() => handleApplyClick(job)}
-                    >
-                      Apply Now
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-4 mb-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Building className="w-4 h-4" />
-                      {job.department}
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-4 mb-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Building className="w-4 h-4" />
+                        {job.department}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <MapPin className="w-4 h-4" />
+                        {job.location}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-4 h-4" />
+                        {job.type}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <DollarSign className="w-4 h-4" />
+                        {job.salary}
+                      </div>
+                      {/* Display isActive status for admins */}
+                      {isAdmin && (
+                        <div className="flex items-center gap-1">
+                          <Badge variant={job.isActive ? "default" : "destructive"}>
+                            {job.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center gap-1">
-                      <MapPin className="w-4 h-4" />
-                      {job.location}
+                    <div className="flex flex-wrap gap-2">
+                      {job.skills.map((skill, skillIndex) => (
+                        <Badge key={skillIndex} variant="secondary">
+                          {skill}
+                        </Badge>
+                      ))}
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      {job.type}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <DollarSign className="w-4 h-4" />
-                      {job.salary}
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {job.skills.map((skill, skillIndex) => (
-                      <Badge key={skillIndex} variant="secondary">
-                        {skill}
-                      </Badge>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16">
+              <Briefcase className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-xl font-semibold mb-2">
+                No job openings available
+              </h3>
+              <p className="text-muted-foreground">
+                Check back soon for new opportunities!
+              </p>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -286,7 +388,7 @@ const Career = () => {
         </div>
       </section>
 
-      {/* Job Application Form */}
+      {/* Job Application Form Modal */}
       {selectedJob && (
         <JobApplicationForm
           isOpen={isApplicationFormOpen}
@@ -297,6 +399,15 @@ const Career = () => {
           jobTitle={selectedJob.title}
           jobDepartment={selectedJob.department}
           jobLocation={selectedJob.location}
+        />
+      )}
+
+      {/* Create/Edit Job Listing Form Modal (Admin Only) */}
+      {isAdmin && (
+        <CreateJobListingForm
+          isOpen={isCreateJobFormOpen}
+          onClose={handleCloseCreateJobForm}
+          jobId={editingJobId} // Pass the jobId to the form for editing
         />
       )}
     </div>

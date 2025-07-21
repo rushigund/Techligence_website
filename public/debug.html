@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RoboTech Debug Page</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 50px auto;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .status {
+        padding: 15px;
+        margin: 10px 0;
+        border-radius: 5px;
+        border-left: 4px solid #007bff;
+        background: white;
+      }
+      .success {
+        border-left-color: #28a745;
+      }
+      .error {
+        border-left-color: #dc3545;
+      }
+      .info {
+        border-left-color: #17a2b8;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🤖 RoboTech Debug Page</h1>
+
+    <div class="status success">
+      ✅ <strong>Static Files Working</strong> - This page loads correctly
+    </div>
+
+    <div class="status info">
+      ℹ️ <strong>Frontend Server</strong> - Vite development server should be
+      running on port 8080
+    </div>
+
+    <div class="status" id="react-status">
+      ⏳ <strong>React App Status</strong> - Testing...
+    </div>
+
+    <div class="status">
+      📍 <strong>Access Information:</strong>
+      <ul>
+        <li>
+          <strong>Main App:</strong>
+          <a href="/" target="_blank">http://localhost:8080/</a>
+        </li>
+        <li>
+          <strong>Debug Page:</strong>
+          <a href="/debug.html" target="_blank"
+            >http://localhost:8080/debug.html</a
+          >
+        </li>
+        <li>
+          <strong>Controller:</strong>
+          <a href="/controller" target="_blank"
+            >http://localhost:8080/controller</a
+          >
+        </li>
+        <li>
+          <strong>Products:</strong>
+          <a href="/products" target="_blank">http://localhost:8080/products</a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="status">
+      🔧 <strong>Troubleshooting:</strong>
+      <ul>
+        <li>If you see this page, static file serving is working</li>
+        <li>If the main app shows 403, there's a routing issue</li>
+        <li>Check console for JavaScript errors</li>
+        <li>Verify you're accessing port 8080 (frontend) not 5000 (backend)</li>
+      </ul>
+    </div>
+
+    <script>
+      // Test if we can load React
+      setTimeout(() => {
+        const reactStatus = document.getElementById("react-status");
+
+        fetch("/")
+          .then((response) => {
+            if (response.ok) {
+              reactStatus.className = "status success";
+              reactStatus.innerHTML =
+                "✅ <strong>React App</strong> - Main route accessible";
+            } else {
+              reactStatus.className = "status error";
+              reactStatus.innerHTML = `❌ <strong>React App Error</strong> - Status: ${response.status}`;
+            }
+          })
+          .catch((error) => {
+            reactStatus.className = "status error";
+            reactStatus.innerHTML = `❌ <strong>React App Error</strong> - ${error.message}`;
+          });
+      }, 1000);
+
+      // Display current URL info
+      document.body.innerHTML += `
+            <div class="status info">
+                🌐 <strong>Current URL:</strong> ${window.location.href}<br>
+                🏠 <strong>Origin:</strong> ${window.location.origin}<br>
+                📡 <strong>Protocol:</strong> ${window.location.protocol}
+            </div>
+        `;
+    </script>
+  </body>
+</html>

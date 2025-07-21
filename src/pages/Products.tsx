@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs,  TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link, useNavigate } from "react-router-dom"; // Import useNavigate
 import { useCartStore } from "@/store/cartStore";
 import ShoppingCart from "@/components/ShoppingCart";
@@ -26,15 +26,15 @@ import {
   Filter,
   ShoppingCartIcon,
   Heart,
- // Share2,
+  Share2,
   Truck,
- // RotateCcw,
+  RotateCcw,
   PlusCircle, // Import PlusCircle icon for "Add New Product"
   Edit, // Import Edit icon for update
   Trash2, // Import Trash2 icon for delete
 } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "@/contexts/AuthContext"; // Corrected path from 'context' to 'contexts'
+import { useAuth } from "@/context/AuthContext"; // Import useAuth hook
 
 const Products = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -80,16 +80,13 @@ const Products = () => {
   // Placeholder for handling product delete
   const handleDeleteProduct = (robotId: number) => {
     // TODO: Implement actual delete logic, e.g., show a confirmation dialog
-    if (
-      window.confirm(
-        `Are you sure you want to delete product with ID: ${robotId}?`,
-      )
-    ) {
+    if (window.confirm(`Are you sure you want to delete product with ID: ${robotId}?`)) {
       console.log(`Admin confirmed deletion for product with ID: ${robotId}`);
       toast.success(`Product ${robotId} deleted (simulated)`);
       // In a real app, you'd call productsAPI.deleteProduct(robotId) here
     }
   };
+
 
   const robots = [
     {
@@ -289,9 +286,7 @@ const Products = () => {
             {/* Add New Product Button (Admin Only) */}
             {isAdmin && (
               <div className="mt-8">
-                <Link to="/admin/products/new">
-                  {" "}
-                  {/* Assuming a route for adding new products */}
+                <Link to="/admin/products/new"> {/* Assuming a route for adding new products */}
                   <Button size="lg" className="gap-2">
                     <PlusCircle className="w-5 h-5" />
                     Add New Product
@@ -381,6 +376,7 @@ const Products = () => {
                           }`}
                         />
                       </Button>
+                     
                     </div>
                   </div>
 

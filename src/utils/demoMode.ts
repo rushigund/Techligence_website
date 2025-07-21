@@ -170,34 +170,14 @@ export const demoAPI = {
   urdf: {
     upload: async (file: File) => {
       await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // Read file content for demo
-      const content = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve((e.target?.result as string) || "");
-        reader.onerror = reject;
-        reader.readAsText(file);
-      });
-
       return {
         data: {
           success: true,
           data: {
-            id: `demo-urdf-${Date.now()}`,
-            _id: `demo-urdf-${Date.now()}`,
+            id: "demo-urdf-123",
             filename: file.name,
-            name: file.name.replace(/\.[^/.]+$/, ""),
             size: file.size,
-            fileSize: file.size,
             uploadedAt: new Date().toISOString(),
-            createdAt: new Date().toISOString(),
-            content: content,
-            validation: {
-              isValid: content.includes("<robot") && content.includes("<link"),
-              errors: [],
-              warnings: [],
-            },
-            owner: "demo-user-123",
           },
         },
       };

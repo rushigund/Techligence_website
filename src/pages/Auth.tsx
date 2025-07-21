@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react"; // Added useEffect
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -24,12 +24,47 @@ import {
   Chrome,
   Eye,
   EyeOff,
+  Loader2, // Import for loading spinner
 } from "lucide-react";
 
+import { useAuth } from "@/context/AuthContext"; // Import useAuth hook
+import { useNavigate } from "react-router-dom"; // Import useNavigate hook
+
 const Auth = () => {
-  const [showPassword, setShowPassword] = useState(false);
+  // State for password visibility
+  const [showSignInPassword, setShowSignInPassword] = useState(false);
+  const [showSignUpPassword, setShowSignUpPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // State for Sign In form
+  const [signInEmail, setSignInEmail] = useState("");
+  const [signInPassword, setSignInPassword] = useState("");
+  const [isSigningIn, setIsSigningIn] = useState(false);
+  const [signInError, setSignInError] = useState("");
+
+  // State for Sign Up form
+  const [signUpFirstName, setSignUpFirstName] = useState("");
+  const [signUpLastName, setSignUpLastName] = useState("");
+  const [signUpEmail, setSignUpEmail] = useState("");
+  const [signUpPassword, setSignUpPassword] = useState("");
+  const [signUpConfirmPassword, setSignUpConfirmPassword] = useState("");
+  const [isSigningUp, setIsSigningUp] = useState(false);
+  const [signUpError, setSignUpError] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
+
+  // Access authentication functions from context
+  const { login, register, isAuthenticated, loading: authLoading } = useAuth();
+  const navigate = useNavigate(); // Initialize useNavigate
+
+  // Redirect if already authenticated (e.g., user lands on /auth but is already logged in)
+  useEffect(() => {
+    if (isAuthenticated && !authLoading) {
+      navigate("/"); // Redirect to home page
+    }
+  }, [isAuthenticated, authLoading, navigate]);
+
+
+  // Features list (remains unchanged)
   const features = [
     {
       icon: Bot,
@@ -48,8 +83,58 @@ const Auth = () => {
     },
   ];
 
+  // Handle Sign In form submission
+  const handleSignIn = async (e) => {
+    e.preventDefault();
+    setSignInError(""); // Clear previous errors
+    setIsSigningIn(true);
+    try {
+      await login(signInEmail, signInPassword);
+      console.log("Sign in successful!");
+      navigate("/"); // Redirect to home page on successful login
+    } catch (error) {
+      console.error("Sign in failed:", error);
+      setSignInError(error.message || "An unexpected error occurred during sign in.");
+    } finally {
+      setIsSigningIn(false);
+    }
+  };
+
+  // Handle Sign Up form submission
+  const handleSignUp = async (e) => {
+    e.preventDefault();
+    setSignUpError(""); // Clear previous errors
+
+    if (signUpPassword !== signUpConfirmPassword) {
+      setSignUpError("Passwords do not match.");
+      return;
+    }
+
+    if (!termsAccepted) {
+        setSignUpError("You must agree to the Terms of Service and Privacy Policy.");
+        return;
+    }
+
+    setIsSigningUp(true);
+    try {
+      await register({
+        firstName: signUpFirstName,
+        lastName: signUpLastName,
+        email: signUpEmail,
+        password: signUpPassword,
+      });
+      console.log("Sign up successful!");
+      navigate("/"); // Redirect to home page on successful registration
+    } catch (error) {
+      console.error("Sign up failed:", error);
+      setSignUpError(error.message || "An unexpected error occurred during sign up.");
+    } finally {
+      setIsSigningUp(false);
+    }
+  };
+
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    <div className="flex flex-col min-h-screen bg-background font-inter"> {/* Added font-inter */}
       {/* Header */}
       <section className="py-16 bg-gradient-to-br from-background via-accent/20 to-secondary/10">
         <div className="container mx-auto px-4">
@@ -59,8 +144,7 @@ const Auth = () => {
               Account Access
             </Badge>
             <h1 className="text-4xl lg:text-6xl font-display font-bold mb-6">
-              Join the <span className="text-primary">Techligence</span>{" "}
-              Community
+              Join the <span className="text-primary">Techligence</span> Community
             </h1>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
               Create your account to access advanced robot control features,
@@ -126,7 +210,7 @@ const Auth = () => {
 
             {/* Auth Forms */}
             <div className="w-full">
-              <Card className="border-0 shadow-xl">
+              <Card className="border-0 shadow-xl rounded-xl"> {/* Added rounded-xl */}
                 <CardHeader className="text-center">
                   <div className="flex items-center justify-center w-12 h-12 bg-primary/10 rounded-lg mx-auto mb-4">
                     <Bot className="w-6 h-6 text-primary" />
@@ -147,16 +231,20 @@ const Auth = () => {
 
                     {/* Sign In Form */}
                     <TabsContent value="signin" className="space-y-6">
-                      <div className="space-y-4">
+                      <form onSubmit={handleSignIn} className="space-y-4">
                         <div className="space-y-2">
                           <Label htmlFor="signin-email">Email</Label>
                           <div className="relative">
                             <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                             <Input
                               id="signin-email"
+                              name="email"
                               type="email"
                               placeholder="your@email.com"
-                              className="pl-10"
+                              className="pl-10 rounded-md" // Added rounded-md
+                              required
+                              value={signInEmail}
+                              onChange={(e) => setSignInEmail(e.target.value)}
                             />
                           </div>
                         </div>
@@ -167,18 +255,22 @@ const Auth = () => {
                             <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                             <Input
                               id="signin-password"
-                              type={showPassword ? "text" : "password"}
+                              name="password"
+                              type={showSignInPassword ? "text" : "password"}
                               placeholder="••••••••"
-                              className="pl-10 pr-10"
+                              className="pl-10 pr-10 rounded-md" // Added rounded-md
+                              required
+                              value={signInPassword}
+                              onChange={(e) => setSignInPassword(e.target.value)}
                             />
                             <Button
                               type="button"
                               variant="ghost"
                               size="icon"
-                              className="absolute right-1 top-1 h-8 w-8"
-                              onClick={() => setShowPassword(!showPassword)}
+                              className="absolute right-1 top-1 h-8 w-8 rounded-md" // Added rounded-md
+                              onClick={() => setShowSignInPassword(!showSignInPassword)}
                             >
-                              {showPassword ? (
+                              {showSignInPassword ? (
                                 <EyeOff className="h-4 w-4" />
                               ) : (
                                 <Eye className="h-4 w-4" />
@@ -187,29 +279,38 @@ const Auth = () => {
                           </div>
                         </div>
 
+                        {signInError && (
+                          <p className="text-red-500 text-sm">{signInError}</p>
+                        )}
+
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
-                            <Checkbox id="remember" />
+                            <Checkbox id="remember" name="remember" className="rounded" /> {/* Added rounded */}
                             <Label htmlFor="remember" className="text-sm">
                               Remember me
                             </Label>
                           </div>
                           <Button
+                            type="button"
                             variant="link"
                             className="px-0 text-sm text-primary"
                           >
                             Forgot password?
                           </Button>
                         </div>
-                      </div>
 
-                      <Button className="w-full" size="lg">
-                        Sign In
-                      </Button>
+                        <Button type="submit" className="w-full rounded-md" size="lg" disabled={isSigningIn}> {/* Added rounded-md */}
+                          {isSigningIn ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            "Sign In"
+                          )}
+                        </Button>
+                      </form>
 
                       <div className="relative">
                         <div className="absolute inset-0 flex items-center">
-                          <Separator className="w-full" />
+                          <Separator className="w-full rounded" /> {/* Added rounded */}
                         </div>
                         <div className="relative flex justify-center text-xs uppercase">
                           <span className="bg-background px-2 text-muted-foreground">
@@ -219,11 +320,11 @@ const Auth = () => {
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
-                        <Button variant="outline" className="gap-2">
+                        <Button variant="outline" className="gap-2 rounded-md"> {/* Added rounded-md */}
                           <Github className="h-4 w-4" />
                           GitHub
                         </Button>
-                        <Button variant="outline" className="gap-2">
+                        <Button variant="outline" className="gap-2 rounded-md"> {/* Added rounded-md */}
                           <Chrome className="h-4 w-4" />
                           Google
                         </Button>
@@ -232,22 +333,32 @@ const Auth = () => {
 
                     {/* Sign Up Form */}
                     <TabsContent value="signup" className="space-y-6">
-                      <div className="space-y-4">
+                      <form onSubmit={handleSignUp} className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label htmlFor="first-name">First Name</Label>
                             <Input
                               id="first-name"
+                              name="firstName"
                               type="text"
                               placeholder="John"
+                              className="rounded-md" // Added rounded-md
+                              required
+                              value={signUpFirstName}
+                              onChange={(e) => setSignUpFirstName(e.target.value)}
                             />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="last-name">Last Name</Label>
                             <Input
                               id="last-name"
+                              name="lastName"
                               type="text"
                               placeholder="Doe"
+                              className="rounded-md" // Added rounded-md
+                              required
+                              value={signUpLastName}
+                              onChange={(e) => setSignUpLastName(e.target.value)}
                             />
                           </div>
                         </div>
@@ -258,9 +369,13 @@ const Auth = () => {
                             <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                             <Input
                               id="signup-email"
+                              name="email"
                               type="email"
                               placeholder="your@email.com"
-                              className="pl-10"
+                              className="pl-10 rounded-md" // Added rounded-md
+                              required
+                              value={signUpEmail}
+                              onChange={(e) => setSignUpEmail(e.target.value)}
                             />
                           </div>
                         </div>
@@ -271,18 +386,22 @@ const Auth = () => {
                             <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                             <Input
                               id="signup-password"
-                              type={showPassword ? "text" : "password"}
+                              name="password"
+                              type={showSignUpPassword ? "text" : "password"}
                               placeholder="••••••••"
-                              className="pl-10 pr-10"
+                              className="pl-10 pr-10 rounded-md" // Added rounded-md
+                              required
+                              value={signUpPassword}
+                              onChange={(e) => setSignUpPassword(e.target.value)}
                             />
                             <Button
                               type="button"
                               variant="ghost"
                               size="icon"
-                              className="absolute right-1 top-1 h-8 w-8"
-                              onClick={() => setShowPassword(!showPassword)}
+                              className="absolute right-1 top-1 h-8 w-8 rounded-md" // Added rounded-md
+                              onClick={() => setShowSignUpPassword(!showSignUpPassword)}
                             >
-                              {showPassword ? (
+                              {showSignUpPassword ? (
                                 <EyeOff className="h-4 w-4" />
                               ) : (
                                 <Eye className="h-4 w-4" />
@@ -299,15 +418,19 @@ const Auth = () => {
                             <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                             <Input
                               id="confirm-password"
+                              name="confirmPassword"
                               type={showConfirmPassword ? "text" : "password"}
                               placeholder="••••••••"
-                              className="pl-10 pr-10"
+                              className="pl-10 pr-10 rounded-md" // Added rounded-md
+                              required
+                              value={signUpConfirmPassword}
+                              onChange={(e) => setSignUpConfirmPassword(e.target.value)}
                             />
                             <Button
                               type="button"
                               variant="ghost"
                               size="icon"
-                              className="absolute right-1 top-1 h-8 w-8"
+                              className="absolute right-1 top-1 h-8 w-8 rounded-md" // Added rounded-md
                               onClick={() =>
                                 setShowConfirmPassword(!showConfirmPassword)
                               }
@@ -321,11 +444,23 @@ const Auth = () => {
                           </div>
                         </div>
 
+                        {signUpError && (
+                          <p className="text-red-500 text-sm">{signUpError}</p>
+                        )}
+
                         <div className="flex items-center space-x-2">
-                          <Checkbox id="terms" />
+                          <Checkbox
+                            id="terms"
+                            name="terms"
+                            required
+                            checked={termsAccepted}
+                            onCheckedChange={(checked) => setTermsAccepted(!!checked)} // Fixed: Cast to boolean
+                            className="rounded" // Added rounded
+                          />
                           <Label htmlFor="terms" className="text-sm">
                             I agree to the{" "}
                             <Button
+                              type="button"
                               variant="link"
                               className="px-0 text-sm text-primary h-auto"
                             >
@@ -333,6 +468,7 @@ const Auth = () => {
                             </Button>{" "}
                             and{" "}
                             <Button
+                              type="button"
                               variant="link"
                               className="px-0 text-sm text-primary h-auto"
                             >
@@ -340,15 +476,19 @@ const Auth = () => {
                             </Button>
                           </Label>
                         </div>
-                      </div>
 
-                      <Button className="w-full" size="lg">
-                        Create Account
-                      </Button>
+                        <Button type="submit" className="w-full rounded-md" size="lg" disabled={isSigningUp}> {/* Added rounded-md */}
+                          {isSigningUp ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            "Create Account"
+                          )}
+                        </Button>
+                      </form>
 
                       <div className="relative">
                         <div className="absolute inset-0 flex items-center">
-                          <Separator className="w-full" />
+                          <Separator className="w-full rounded" /> {/* Added rounded */}
                         </div>
                         <div className="relative flex justify-center text-xs uppercase">
                           <span className="bg-background px-2 text-muted-foreground">
@@ -358,11 +498,11 @@ const Auth = () => {
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
-                        <Button variant="outline" className="gap-2">
+                        <Button variant="outline" className="gap-2 rounded-md"> {/* Added rounded-md */}
                           <Github className="h-4 w-4" />
                           GitHub
                         </Button>
-                        <Button variant="outline" className="gap-2">
+                        <Button variant="outline" className="gap-2 rounded-md"> {/* Added rounded-md */}
                           <Chrome className="h-4 w-4" />
                           Google
                         </Button>

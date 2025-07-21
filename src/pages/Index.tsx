@@ -9,7 +9,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import AppStatus from "@/components/AppStatus";
-import Footer from "@/components/Footer";
 import {
   ArrowRight,
   Bot,
@@ -52,9 +51,9 @@ const Index = () => {
   ];
 
   const stats = [
-    { value: "10+", label: "Robots Developed" },
+    { value: "500+", label: "Robots Deployed" },
     { value: "99.9%", label: "Uptime" },
-    { value: "0", label: "Countries" },
+    { value: "50+", label: "Countries" },
     { value: "24/7", label: "Support" },
   ];
 
@@ -259,7 +258,7 @@ const Index = () => {
               <Button
                 size="lg"
                 variant="outline"
-                className="gap-2 text-lg px-8 border-white text-white hover:bg-white hover:text-primary"
+                className="gap-2 text-lg px-8 border-white text-primary"
               >
                 Get Started
                 <ChevronRight className="w-5 h-5" />
@@ -269,17 +268,14 @@ const Index = () => {
         </div>
       </section>
 
-      {/* App Status Section - Development Only */}
+      {/* App Status Section - Development Only
       {import.meta.env.DEV && (
         <section className="py-12 bg-muted/30">
           <div className="container mx-auto px-4">
             <AppStatus />
           </div>
         </section>
-      )}
-
-      {/* Footer */}
-      <Footer />
+      )} */}
     </div>
   );
 };

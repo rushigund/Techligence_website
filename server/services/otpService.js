@@ -35,7 +35,7 @@ export async function sendOTP(email, otp) {
   });
 
   const mailOptions = {
-    from: `"RoboTech" <${process.env.SMTP_USER}>`,
+    from: `"Techligence" <${process.env.SMTP_USER}>`,
     to: email,
     subject: "Your OTP Code",
     text: `Your OTP code is: ${otp}. `,

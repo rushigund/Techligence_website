@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { careerAPI } from "@/services/api";
+import { careerAPI } from "@/services/api"; // Uncommented careerAPI import
 import {
   Dialog,
   DialogContent,
@@ -41,7 +41,9 @@ import {
   Calendar,
   DollarSign,
   CheckCircle,
+  Loader2, // Import Loader2 for loading spinner
 } from "lucide-react";
+import { toast } from "sonner"; // Import toast for notifications
 
 interface JobApplicationFormProps {
   isOpen: boolean;
@@ -158,6 +160,63 @@ const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
     e.preventDefault();
     setIsSubmitting(true);
 
+    // Client-side validation for Step 4 (Review and Submit)
+    if (currentStep === 4) {
+      if (!formData.agreeTerms || !formData.agreePrivacy) {
+        toast.error("Please agree to the Terms and Conditions and Privacy Policy.");
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
+    // Basic validation for required fields before submission (can be expanded per step)
+    if (currentStep === 1 && (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.address || !formData.city || !formData.state || !formData.zipCode)) {
+        toast.error("Please fill all required fields in Personal Information.");
+        setIsSubmitting(false);
+        return;
+    }
+    if (currentStep === 2 && (!formData.totalExperience || !formData.relevantExperience || !formData.education)) {
+        toast.error("Please fill all required fields in Professional Information.");
+        setIsSubmitting(false);
+        return;
+    }
+    if (currentStep === 3 && (!formData.resume || !formData.coverLetter || !formData.whyJoin || !formData.availability)) {
+        toast.error("Please fill all required fields in Application Details, including resume upload.");
+        setIsSubmitting(false);
+        return;
+    }
+
+    // File validation for resume
+    if (formData.resume) {
+      if (formData.resume.size > 5 * 1024 * 1024) { // 5 MB limit
+        toast.error("Resume file size exceeds 5MB limit.");
+        setIsSubmitting(false);
+        return;
+      }
+      const allowedResumeTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (!allowedResumeTypes.includes(formData.resume.type)) {
+        toast.error("Only PDF and Word documents are allowed for resume.");
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
+    // File validation for portfolio (optional, but if provided, validate type/size)
+    if (formData.portfolio) {
+        if (formData.portfolio.size > 10 * 1024 * 1024) { // Example: 10 MB limit for portfolio
+            toast.error("Portfolio file size exceeds 10MB limit.");
+            setIsSubmitting(false);
+            return;
+        }
+        const allowedPortfolioTypes = ['application/pdf', 'application/zip', 'image/jpeg', 'image/png']; // Example types
+        if (!allowedPortfolioTypes.includes(formData.portfolio.type)) {
+            toast.error("Only PDF, Zip, JPG, PNG files are allowed for portfolio.");
+            setIsSubmitting(false);
+            return;
+        }
+    }
+
+
     try {
       // Create FormData for file uploads
       const submitData = new FormData();
@@ -184,25 +243,55 @@ const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
       submitData.append("jobDepartment", jobDepartment);
       submitData.append("jobLocation", jobLocation);
 
-      // Submit application
+      // Submit application using careerAPI
       const response = await careerAPI.submitApplication(submitData);
 
       if (response.data.success) {
         setIsSubmitted(true);
+        toast.success(response.data.message || "Application submitted successfully!");
         console.log("✅ Application submitted successfully:", response.data);
       } else {
         throw new Error(response.data.message || "Submission failed");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Application submission error:", error);
-      alert("Error submitting application. Please try again.");
+      toast.error(error.response?.data?.message || "Error submitting application. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const nextStep = () => {
-    if (currentStep < 4) setCurrentStep(currentStep + 1);
+    // Basic validation before moving to the next step
+    let isValid = true;
+    if (currentStep === 1) {
+      if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.address || !formData.city || !formData.state || !formData.zipCode) {
+        toast.error("Please fill all required fields in Personal Information.");
+        isValid = false;
+      }
+    } else if (currentStep === 2) {
+      if (!formData.totalExperience || !formData.relevantExperience || !formData.education) {
+        toast.error("Please fill all required fields in Professional Information.");
+        isValid = false;
+      }
+    } else if (currentStep === 3) {
+        if (!formData.resume) {
+            toast.error("Resume is required for application details.");
+            isValid = false;
+        } else if (formData.resume.size > 5 * 1024 * 1024) {
+            toast.error("Resume file size exceeds 5MB limit.");
+            isValid = false;
+        } else if (!['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'].includes(formData.resume.type)) {
+            toast.error("Only PDF and Word documents are allowed for resume.");
+            isValid = false;
+        }
+        if (!formData.coverLetter || !formData.whyJoin || !formData.availability) {
+            toast.error("Please fill all required text fields in Application Details.");
+            isValid = false;
+        }
+    }
+
+    if (isValid && currentStep < 4) setCurrentStep(currentStep + 1);
   };
 
   const prevStep = () => {
@@ -631,6 +720,7 @@ const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
                               e.target.files?.[0] || null,
                             )
                           }
+                          required // Resume is required
                         />
                       </label>
                     </div>
@@ -650,7 +740,7 @@ const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
                         <input
                           type="file"
                           className="hidden"
-                          accept=".pdf,.zip"
+                          accept=".pdf,.zip,.jpg,.jpeg,.png" // Added image types
                           onChange={(e) =>
                             handleFileChange(
                               "portfolio",
@@ -871,7 +961,7 @@ const JobApplicationForm: React.FC<JobApplicationFormProps> = ({
                   className="gap-2"
                 >
                   {isSubmitting ? (
-                    "Submitting..."
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Submitting...</>
                   ) : (
                     <>
                       <Send className="w-4 h-4" />

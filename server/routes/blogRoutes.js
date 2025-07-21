@@ -2,6 +2,7 @@ import express from "express";
 import { body, validationResult } from "express-validator";
 import BlogPost from "../models/BlogPost.js";
 import { authenticateToken, authorizeRoles } from "../middleware/auth.js"; // Import auth and authorize middleware
+import { updateSingleContentItem } from "../utils/contentIngestor.js"; // NEW: Import contentIngestor for RAG updates
 
 const router = express.Router();
 
@@ -84,6 +85,10 @@ router.post(
 
       const newPost = new BlogPost(req.body);
       await newPost.save();
+
+      // NEW: Post-save hook for RAG
+      await updateSingleContentItem('blog', newPost, 'upsert');
+
       res.status(201).json({ success: true, message: "Blog post created successfully!", data: newPost });
     } catch (error) {
       console.error("Error creating blog post:", error);
@@ -139,6 +144,10 @@ router.put(
       if (!updatedPost) {
         return res.status(404).json({ success: false, message: "Blog post not found" });
       }
+
+      // NEW: Post-update hook for RAG
+      await updateSingleContentItem('blog', updatedPost, 'upsert');
+
       res.json({ success: true, message: "Blog post updated successfully!", data: updatedPost });
     } catch (error) {
       console.error("Error updating blog post:", error);
@@ -161,6 +170,12 @@ router.delete(
         if (!deletedPost) {
           return res.status(404).json({ success: false, message: "Blog post not found" });
         }
+
+        // NEW: Post-delete hook for RAG
+        // Note: As discussed, direct deletion by sourceId prefix is complex without knowing all chunk IDs.
+        // For now, this will log a warning. Rely on full re-ingestion for cleanup or implement
+        // a more sophisticated deletion strategy if needed.
+        await updateSingleContentItem('blog', deletedPost, 'delete');
 
         res.json({
           success: true,
