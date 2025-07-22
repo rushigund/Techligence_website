@@ -38,7 +38,8 @@ import {
   Activity,
   Smile,
   Search,
-  LogOut, // Import LogOut icon
+  LogOut,
+  HouseIcon, // Import LogOut icon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ShoppingCart from "./ShoppingCart";
@@ -65,7 +66,7 @@ const Navigation = () => {
 
   // Navigation structure with dropdowns
   const navigationConfig = {
-    simple: [{ name: "Home", href: "/", icon: null }],
+    simple: [{ name: "Home", href: "/", icon: HouseIcon }],
     dropdown: {
       products: {
         name: "Products",

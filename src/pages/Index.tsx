@@ -11,7 +11,7 @@ import { Link } from "react-router-dom";
 import AppStatus from "@/components/AppStatus";
 import {
   ArrowRight,
-  Bot,
+  Bot, // Keep Bot import if it's used elsewhere, otherwise it can be removed
   Cpu,
   Zap,
   Shield,
@@ -25,7 +25,7 @@ import {
 const Index = () => {
   const features = [
     {
-      icon: Bot,
+      icon: Bot, // This is where the Bot icon is still used for features, so keep the import
       title: "Advanced Robotics",
       description:
         "Cutting-edge robotic systems with AI-powered autonomous navigation and decision making.",
@@ -120,7 +120,12 @@ const Index = () => {
             <div className="flex-1 relative">
               <div className="relative w-full h-96 lg:h-[500px] bg-gradient-to-br from-primary/20 to-secondary/20 rounded-3xl flex items-center justify-center overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10" />
-                <Bot className="w-48 h-48 lg:w-64 lg:h-64 text-primary opacity-80" />
+                {/* Replaced Bot icon with an image for the GIF */}
+                <img
+                  src="/robot.gif" // IMPORTANT: Make sure this path matches your GIF file's name and location in the public folder
+                  alt="Techligence Robot in action" // Descriptive alt text for accessibility
+                  className="absolute inset-0 w-full h-full object-cover rounded-3xl"
+                />
                 <div className="absolute top-4 right-4 w-3 h-3 bg-primary rounded-full animate-pulse" />
                 <div className="absolute bottom-8 left-8 w-2 h-2 bg-secondary rounded-full animate-ping" />
               </div>
@@ -215,15 +220,14 @@ const Index = () => {
                 <CardHeader>
                   <div className="text-4xl mb-4">{app.image}</div>
                   <CardTitle className="text-xl group-hover:text-primary transition-colors">
-                    {app.title}
-                  </CardTitle>
+                    {app.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <CardDescription className="text-base leading-relaxed mb-4">
                     {app.description}
                   </CardDescription>
                   <div className="flex items-center text-primary font-medium group-hover:gap-2 transition-all">
-                    Learn More
+                   <Link to='/about'> Learn More</Link>
                     <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </CardContent>
