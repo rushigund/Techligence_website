@@ -51,9 +51,9 @@ const Index = () => {
   ];
 
   const stats = [
-    { value: "500+", label: "Robots Deployed" },
+    { value: "10+", label: "Robots Deployed" },
     { value: "99.9%", label: "Uptime" },
-    { value: "50+", label: "Countries" },
+    { value: "1+", label: "Countries" },
     { value: "24/7", label: "Support" },
   ];
 
@@ -220,14 +220,15 @@ const Index = () => {
                 <CardHeader>
                   <div className="text-4xl mb-4">{app.image}</div>
                   <CardTitle className="text-xl group-hover:text-primary transition-colors">
-                    {app.title}</CardTitle>
+                    {app.title}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <CardDescription className="text-base leading-relaxed mb-4">
                     {app.description}
                   </CardDescription>
                   <div className="flex items-center text-primary font-medium group-hover:gap-2 transition-all">
-                   <Link to='/about'> Learn More</Link>
+                    <Link to="/about"> Learn More</Link>
                     <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </CardContent>
