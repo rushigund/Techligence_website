@@ -37,25 +37,42 @@ const About = () => {
     {
       name: "Under Development",
       role: "TBA",
-      description:
-        "Under Development",
+      description: "Under Development",
       image: "https://placehold.co/100x100/D0E9F0/FFFFFF?text=SL", // Placeholder image
     },
     {
       name: "Under Development",
       role: "TBA",
-      description:
-        "Under Development",
+      description: "Under Development",
       image: "https://placehold.co/100x100/E0F9F5/FFFFFF?text=MC", // Placeholder image
     },
   ];
 
   const milestones = [
-    { year: 2018, event: "Company Founded: Techligence established with a vision for autonomous robotics." },
-    { year: 2019, event: "First Prototype: Unveiled the initial 4WD exploration robot prototype." },
-    { year: 2021, event: "Series A Funding: Secured significant investment for R&D and expansion." },
-    { year: 2023, event: "Product Launch: Introduced the RoboTech Explorer Pro to the market." },
-    { year: 2024, event: "Global Expansion: Opened new offices in Europe and Asia." },
+    {
+      year: 2018,
+      event:
+        "Company Founded: Techligence established with a vision for autonomous robotics.",
+    },
+    {
+      year: 2019,
+      event:
+        "First Prototype: Unveiled the initial 4WD exploration robot prototype.",
+    },
+    {
+      year: 2021,
+      event:
+        "Series A Funding: Secured significant investment for R&D and expansion.",
+    },
+    {
+      year: 2023,
+      event:
+        "Product Launch: Introduced the RoboTech Explorer Pro to the market.",
+    },
+    {
+      year: 2024,
+      event: "Global Expansion: Opened new offices in Europe and Asia.",
+    },
   ];
 
   return (
@@ -140,7 +157,7 @@ const About = () => {
                 <CardTitle className="text-xl">Our Values</CardTitle>
               </CardHeader>
               <CardContent>
-                <ul className="text-base leading-relaxed text-muted-foreground list-disc list-inside">
+                <ul className="text-base leading-relaxed text-muted-foreground list-disc list-outside inline-block text-left">
                   <li>Innovation</li>
                   <li>Integrity</li>
                   <li>Excellence</li>
@@ -178,9 +195,7 @@ const About = () => {
                     alt={member.name}
                     className="w-24 h-24 rounded-full mx-auto mb-4 object-cover border-2 border-primary/50"
                   />
-                  <CardTitle className="text-lg mb-1">
-                    {member.name}
-                  </CardTitle>
+                  <CardTitle className="text-lg mb-1">{member.name}</CardTitle>
                   <p className="text-sm font-medium text-primary mb-3">
                     {member.role}
                   </p>
@@ -225,9 +240,7 @@ const About = () => {
                       <h3 className="text-xl font-semibold text-primary mb-2">
                         {milestone.year}
                       </h3>
-                      <p className="text-muted-foreground">
-                        {milestone.event}
-                      </p>
+                      <p className="text-muted-foreground">{milestone.event}</p>
                     </CardContent>
                   </Card>
                 </div>
@@ -285,7 +298,11 @@ const About = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/contact">
-              <Button size="lg" variant="secondary" className="gap-2 text-lg px-8">
+              <Button
+                size="lg"
+                variant="secondary"
+                className="gap-2 text-lg px-8"
+              >
                 Contact Our Team
                 <ArrowRight className="w-5 h-5" />
               </Button>
