@@ -23,6 +23,7 @@ import About from "./pages/About";
 import Chatbot from "./components/Chatbot";
 import MLTools from "./pages/MLTools"; // Import MLTools
 import React from "react"; // Import React for useEffect
+import AdvancedURDFController from "./pages/AdvancedURDFController";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -97,6 +98,7 @@ const App = () => (
               <Route path="/about" element={<About />} />
               <Route path="/ml-tools" element={<MLTools />} />
               <Route path="/ml-tools/:tool" element={<MLTools />} />
+              <Route path="/controller/advanced-urdf-controller" element={<AdvancedURDFController />} />
               {/* Catch-all route for 404 Not Found */}
               <Route path="*" element={<NotFound />} />
             </Routes>
