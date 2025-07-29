@@ -526,7 +526,7 @@ const Navigation = () => {
                 <DropdownNavItem config={navigationConfig.dropdown.products} />
                 <DropdownNavItem config={navigationConfig.dropdown.blog} />
                 <DropdownNavItem config={navigationConfig.dropdown.company} />
-                <DropdownNavItem config={navigationConfig.dropdown.robotlab} />
+                {/*<DropdownNavItem config={navigationConfig.dropdown.robotlab} />/*}
 
                 {/* Simple end items */}
                 {navigationConfig.simple_end.map((item) => (
@@ -607,10 +607,10 @@ const Navigation = () => {
                   config={navigationConfig.dropdown.company}
                   mobile
                 />
-                <DropdownNavItem
+                {/*<DropdownNavItem
                   config={navigationConfig.dropdown.robotlab}
                   mobile
-                />
+                />*/}
 
                 {/* Simple end items */}
                 {navigationConfig.simple_end.map((item) => (
