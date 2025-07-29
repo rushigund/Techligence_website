@@ -20,6 +20,7 @@ export default defineConfig(({ mode }) => ({
       },
     },
   },
+  allowedHosts: ["techligence-website-2.onrender.com"],
   plugins: [react()],
   resolve: {
     alias: {
