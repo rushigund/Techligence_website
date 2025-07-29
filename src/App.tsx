@@ -23,6 +23,7 @@ import About from "./pages/About";
 import Chatbot from "./components/Chatbot";
 import MLTools from "./pages/MLTools"; // Import MLTools
 import React from "react"; // Import React for useEffect
+import RobotLab from "./pages/RobotLab"; // Import RobotLab page
 import AdvancedURDFController from "./pages/AdvancedURDFController";
 
 const queryClient = new QueryClient({
@@ -45,7 +46,7 @@ const ScrollToTop = () => {
     // Scroll to the top of the page on route change with smooth animation
     window.scrollTo({
       top: 0,
-      behavior: 'smooth' // Added smooth behavior for animation
+      behavior: "smooth", // Added smooth behavior for animation
     });
   }, [pathname]); // Dependency array: re-run effect when pathname changes
 
@@ -68,7 +69,9 @@ const App = () => (
         <Toaster />
         <Sonner />
         {/* BrowserRouter for client-side routing */}
-        <BrowserRouter>
+        <BrowserRouter
+          future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+        >
           {/* Include ScrollToTop component to handle auto-scrolling on navigation */}
           <ScrollToTop />
           {/* Main application container with a flexible column layout */}
@@ -91,14 +94,32 @@ const App = () => (
               <Route path="/blog" element={<Blog />} />
               <Route path="/blog/:postId" element={<BlogPostPage />} />
               <Route path="/admin/blog/new" element={<NewBlogPostPage />} />
-              <Route path="/admin/blog/edit/:postId" element={<NewBlogPostPage />} />
+              <Route
+                path="/admin/blog/edit/:postId"
+                element={<NewBlogPostPage />}
+              />
               <Route path="/admin/products/new" element={<NewProductPage />} />
-              <Route path="/admin/products/edit/:productId" element={<NewProductPage />} />
-              <Route path="/admin/career/edit/:jobId" element={<CreateJobListingForm isOpen={true} onClose={() => window.history.back()} />} />
+              <Route
+                path="/admin/products/edit/:productId"
+                element={<NewProductPage />}
+              />
+              <Route
+                path="/admin/career/edit/:jobId"
+                element={
+                  <CreateJobListingForm
+                    isOpen={true}
+                    onClose={() => window.history.back()}
+                  />
+                }
+              />
               <Route path="/about" element={<About />} />
               <Route path="/ml-tools" element={<MLTools />} />
               <Route path="/ml-tools/:tool" element={<MLTools />} />
-              <Route path="/controller/advanced-urdf-controller" element={<AdvancedURDFController />} />
+              <Route
+                path="/controller/advanced-urdf-controller"
+                element={<AdvancedURDFController />}
+              />
+              <Route path="/robot-lab" element={<RobotLab />} />
               {/* Catch-all route for 404 Not Found */}
               <Route path="*" element={<NotFound />} />
             </Routes>

@@ -35,14 +35,17 @@ const ShoppingCartComponent = () => {
   const [showCheckout, setShowCheckout] = useState(false);
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
     }).format(price);
   };
 
   const totalItems = getTotalItems();
-  const totalPrice = getTotalPrice();
+  const subtotal = getTotalPrice();
+  const taxRate = 0.08; // 8% tax
+  const taxAmount = subtotal * taxRate;
+  const finalTotalPrice = subtotal + taxAmount;
 
   return (
     <>
@@ -155,7 +158,7 @@ const ShoppingCartComponent = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>Subtotal:</span>
-                      <span>{formatPrice(totalPrice)}</span>
+                      <span>{formatPrice(subtotal)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>Shipping:</span>
@@ -163,12 +166,12 @@ const ShoppingCartComponent = () => {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>Tax (estimated):</span>
-                      <span>{formatPrice(totalPrice * 0.08)}</span>
+                      <span>{formatPrice(taxAmount)}</span>
                     </div>
                     <Separator />
                     <div className="flex justify-between text-base font-semibold">
                       <span>Total:</span>
-                      <span>{formatPrice(totalPrice * 1.08)}</span>
+                      <span>{formatPrice(finalTotalPrice)}</span>
                     </div>
                   </div>
 
@@ -199,7 +202,7 @@ const ShoppingCartComponent = () => {
         open={showCheckout}
         onOpenChange={setShowCheckout}
         items={items}
-        totalPrice={totalPrice * 1.08}
+        totalPrice={finalTotalPrice}
       />
     </>
   );

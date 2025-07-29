@@ -1,6 +1,10 @@
 import { useState } from "react";
 import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,10 +13,9 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CartItem, useCartStore } from "@/store/cartStore";
-import {
-  CreditCard, Truck, Shield, User, Mail, Check,
-} from "lucide-react";
+import { CreditCard, Truck, Shield, User, Mail, Check } from "lucide-react";
 import { otpAPI, paymentAPI } from "@/services/api"; // <--- Import your APIs
+import { toast } from "sonner";
 
 interface CheckoutDialogProps {
   open: boolean;
@@ -30,13 +33,23 @@ const CheckoutDialog = ({
   totalPrice,
 }: CheckoutDialogProps) => {
   const { clearCart } = useCartStore();
-  const [step, setStep] = useState<"details" | "payment" | "confirmation">("details");
+  const [step, setStep] = useState<"details" | "payment" | "confirmation">(
+    "details",
+  );
   const [isProcessing, setIsProcessing] = useState(false);
-  const [orderNumber] = useState(() => Math.random().toString(36).substr(2, 9).toUpperCase());
+  const [orderNumber] = useState(() =>
+    Math.random().toString(36).substr(2, 9).toUpperCase(),
+  );
 
   const [formData, setFormData] = useState({
-    firstName: "", lastName: "", email: "", phone: "",
-    address: "", city: "", state: "", zipCode: "",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    state: "",
+    zipCode: "",
   });
 
   const [otpSent, setOtpSent] = useState(false);
@@ -47,7 +60,10 @@ const CheckoutDialog = ({
   const [resendTimer, setResendTimer] = useState(30);
 
   const formatPrice = (price: number) =>
-    new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(price);
+    new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+    }).format(price);
 
   const handleInputChange = (field: string, value: string) =>
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -59,8 +75,14 @@ const CheckoutDialog = ({
     setOtpError("");
     setOtp("");
     setFormData({
-      firstName: "", lastName: "", email: "", phone: "",
-      address: "", city: "", state: "", zipCode: "",
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      address: "",
+      city: "",
+      state: "",
+      zipCode: "",
     });
   };
 
@@ -91,8 +113,11 @@ const CheckoutDialog = ({
     } catch (error: any) {
       console.error("Error requesting OTP:", error);
       // Access error message from axios response if available
-      const errorMessage = error.response?.data?.error || error.message || "Failed to send OTP. Please try again.";
-      alert(errorMessage);
+      const errorMessage =
+        error.response?.data?.error ||
+        error.message ||
+        "Failed to send OTP. Please try again.";
+      toast.error(errorMessage);
       throw new Error(errorMessage); // Re-throw to be caught by the calling function (e.g., Continue to Payment button)
     }
   };
@@ -105,13 +130,15 @@ const CheckoutDialog = ({
       if (res.data.success) {
         setOtpVerified(true);
         setOtpError("");
-        alert("OTP verified. You can proceed to payment.");
+        toast.success("OTP verified. You can now proceed to payment.");
       } else {
         setOtpError(res.data.error || "Invalid or expired OTP.");
       }
     } catch (error: any) {
       console.error("Error verifying OTP:", error);
-      setOtpError(error.response?.data?.error || error.message || "Failed to verify OTP.");
+      setOtpError(
+        error.response?.data?.error || error.message || "Failed to verify OTP.",
+      );
     }
   };
 
@@ -128,18 +155,21 @@ const CheckoutDialog = ({
     setIsProcessing(true);
     const loaded = await loadRazorpayScript();
     if (!loaded) {
-      alert("Razorpay SDK failed to load.");
+      toast.error("Razorpay SDK failed to load. Please check your connection.");
       setIsProcessing(false);
       return;
     }
 
     try {
-      // Use the new paymentAPI.createOrder method
-      const backendOrderRes = await paymentAPI.createOrder(totalPrice);
+      // Round the total price to the nearest integer (representing rupees) before sending.
+      // This prevents potential issues with floating-point numbers. The backend is
+      // responsible for converting this value to the smallest currency unit (e.g., paise).
+      const finalAmountInRupees = Math.round(totalPrice);
+      const backendOrderRes = await paymentAPI.createOrder(finalAmountInRupees);
       const backendOrder = backendOrderRes.data; // Axios response data
 
       if (!backendOrder.success) {
-        alert(backendOrder.error || "Failed to create Razorpay order.");
+        toast.error(backendOrder.error || "Failed to create Razorpay order.");
         setIsProcessing(false);
         return;
       }
@@ -163,12 +193,18 @@ const CheckoutDialog = ({
               setStep("confirmation");
               onOpenChange(true); // Re-open dialog to show confirmation
             } else {
-              alert(verifyRes.data.error || "Payment verification failed.");
+              toast.error(
+                verifyRes.data.error || "Payment verification failed.",
+              );
               onOpenChange(true); // Re-open dialog on failure too
             }
           } catch (error: any) {
             console.error("Error during payment verification:", error);
-            alert(error.response?.data?.error || error.message || "An error occurred during payment verification.");
+            toast.error(
+              error.response?.data?.error ||
+                error.message ||
+                "An error occurred during payment verification.",
+            );
             onOpenChange(true); // Re-open dialog on error
           }
         },
@@ -190,7 +226,11 @@ const CheckoutDialog = ({
       rzp.open();
     } catch (error: any) {
       console.error("Error starting Razorpay payment:", error);
-      alert(error.response?.data?.error || error.message || "Failed to initiate payment process.");
+      toast.error(
+        error.response?.data?.error ||
+          error.message ||
+          "Failed to initiate payment process.",
+      );
       onOpenChange(true); // Re-open dialog on failure
     } finally {
       setIsProcessing(false);
@@ -204,10 +244,13 @@ const CheckoutDialog = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(val) => {
-      if (!val) resetState();
-      onOpenChange(val);
-    }}>
+    <Dialog
+      open={open}
+      onOpenChange={(val) => {
+        if (!val) resetState();
+        onOpenChange(val);
+      }}
+    >
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -217,7 +260,8 @@ const CheckoutDialog = ({
             {step === "confirmation" && "Order Confirmation"}
           </DialogTitle>
           <DialogDescription>
-            {step === "details" && "Please provide your shipping and contact information"}
+            {step === "details" &&
+              "Please provide your shipping and contact information"}
             {step === "payment" && "Secure payment with OTP verification"}
             {step === "confirmation" && `Order #${orderNumber} confirmed!`}
           </DialogDescription>
@@ -230,7 +274,9 @@ const CheckoutDialog = ({
             <div className="space-y-2 max-h-32 overflow-y-auto text-sm">
               {items.map((item) => (
                 <div key={item.id} className="flex justify-between">
-                  <span>{item.name} × {item.quantity}</span>
+                  <span>
+                    {item.name} × {item.quantity}
+                  </span>
                   <span>{formatPrice(item.priceValue * item.quantity)}</span>
                 </div>
               ))}
@@ -247,25 +293,103 @@ const CheckoutDialog = ({
             {step === "details" && (
               <Tabs defaultValue="customer" className="space-y-4">
                 <TabsList className="grid grid-cols-2 w-full">
-                  <TabsTrigger value="customer"><User className="w-4 h-4 mr-2" />Customer Info</TabsTrigger>
-                  <TabsTrigger value="shipping"><Truck className="w-4 h-4 mr-2" />Shipping</TabsTrigger>
+                  <TabsTrigger value="customer">
+                    <User className="w-4 h-4 mr-2" />
+                    Customer Info
+                  </TabsTrigger>
+                  <TabsTrigger value="shipping">
+                    <Truck className="w-4 h-4 mr-2" />
+                    Shipping
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="customer" className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
-                    <div><Label>First Name *</Label><Input value={formData.firstName} onChange={(e) => handleInputChange("firstName", e.target.value)} required /></div>
-                    <div><Label>Last Name *</Label><Input value={formData.lastName} onChange={(e) => handleInputChange("lastName", e.target.value)} required /></div>
+                    <div>
+                      <Label>First Name *</Label>
+                      <Input
+                        value={formData.firstName}
+                        onChange={(e) =>
+                          handleInputChange("firstName", e.target.value)
+                        }
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label>Last Name *</Label>
+                      <Input
+                        value={formData.lastName}
+                        onChange={(e) =>
+                          handleInputChange("lastName", e.target.value)
+                        }
+                        required
+                      />
+                    </div>
                   </div>
-                  <div><Label>Email *</Label><Input type="email" value={formData.email} onChange={(e) => handleInputChange("email", e.target.value)} required /></div>
-                  <div><Label>Phone</Label><Input value={formData.phone} onChange={(e) => handleInputChange("phone", e.target.value)} /></div>
+                  <div>
+                    <Label>Email *</Label>
+                    <Input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) =>
+                        handleInputChange("email", e.target.value)
+                      }
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label>Phone</Label>
+                    <Input
+                      value={formData.phone}
+                      onChange={(e) =>
+                        handleInputChange("phone", e.target.value)
+                      }
+                    />
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="shipping" className="space-y-4">
-                  <div><Label>Address *</Label><Input value={formData.address} onChange={(e) => handleInputChange("address", e.target.value)} required /></div>
+                  <div>
+                    <Label>Address *</Label>
+                    <Input
+                      value={formData.address}
+                      onChange={(e) =>
+                        handleInputChange("address", e.target.value)
+                      }
+                      required
+                    />
+                  </div>
                   <div className="grid grid-cols-3 gap-4">
-                    <div><Label>City *</Label><Input value={formData.city} onChange={(e) => handleInputChange("city", e.target.value)} required /></div>
-                    <div><Label>State *</Label><Input value={formData.state} onChange={(e) => handleInputChange("state", e.target.value)} required /></div>
-                    <div><Label>ZIP Code *</Label><Input value={formData.zipCode} onChange={(e) => handleInputChange("zipCode", e.target.value)} required /></div>
+                    <div>
+                      <Label>City *</Label>
+                      <Input
+                        value={formData.city}
+                        onChange={(e) =>
+                          handleInputChange("city", e.target.value)
+                        }
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label>State *</Label>
+                      <Input
+                        value={formData.state}
+                        onChange={(e) =>
+                          handleInputChange("state", e.target.value)
+                        }
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label>ZIP Code *</Label>
+                      <Input
+                        value={formData.zipCode}
+                        onChange={(e) =>
+                          handleInputChange("zipCode", e.target.value)
+                        }
+                        required
+                      />
+                    </div>
                   </div>
                 </TabsContent>
               </Tabs>
@@ -273,20 +397,46 @@ const CheckoutDialog = ({
 
             {step === "payment" && (
               <div className="space-y-4 text-center">
-                <Alert><Shield className="w-4 h-4" /><AlertDescription>Payment is encrypted and secure.</AlertDescription></Alert>
+                <Alert>
+                  <Shield className="w-4 h-4" />
+                  <AlertDescription>
+                    Payment is encrypted and secure.
+                  </AlertDescription>
+                </Alert>
                 {!otpVerified && (
                   <div className="space-y-2">
-                    <Input placeholder="Enter OTP" value={otp} onChange={(e) => setOtp(e.target.value)} />
-                    {otpError && <p className="text-red-500 text-sm">{otpError}</p>}
-                    <Button onClick={verifyOtp} className="w-full">Verify OTP</Button>
-                    <Button variant="outline" disabled={resendDisabled} onClick={requestOtp} className="w-full">
-                      {resendDisabled ? `Resend OTP in ${resendTimer}s` : "Resend OTP"}
+                    <Input
+                      placeholder="Enter OTP"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value)}
+                    />
+                    {otpError && (
+                      <p className="text-red-500 text-sm">{otpError}</p>
+                    )}
+                    <Button onClick={verifyOtp} className="w-full">
+                      Verify OTP
+                    </Button>
+                    <Button
+                      variant="outline"
+                      disabled={resendDisabled}
+                      onClick={requestOtp}
+                      className="w-full"
+                    >
+                      {resendDisabled
+                        ? `Resend OTP in ${resendTimer}s`
+                        : "Resend OTP"}
                     </Button>
                   </div>
                 )}
                 {otpVerified && (
-                  <Button onClick={startRazorpayPayment} className="w-full" disabled={isProcessing}>
-                    {isProcessing ? "Processing..." : `Pay ${formatPrice(totalPrice)}`}
+                  <Button
+                    onClick={startRazorpayPayment}
+                    className="w-full"
+                    disabled={isProcessing}
+                  >
+                    {isProcessing
+                      ? "Processing..."
+                      : `Pay ${formatPrice(totalPrice)}`}
                   </Button>
                 )}
               </div>
@@ -303,7 +453,9 @@ const CheckoutDialog = ({
                 </div>
                 <Alert>
                   <Mail className="h-4 w-4" />
-                  <AlertDescription>Confirmation email sent to {formData.email}</AlertDescription>
+                  <AlertDescription>
+                    Confirmation email sent to {formData.email}
+                  </AlertDescription>
                 </Alert>
               </div>
             )}
@@ -313,20 +465,27 @@ const CheckoutDialog = ({
           <div className="border-t pt-4 mt-4 flex gap-3">
             {step === "details" && (
               <>
-                <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
                 <Button
                   onClick={async () => {
                     try {
                       await requestOtp();
-                      alert("OTP sent to your email.");
+                      toast.info("OTP sent to your email.");
                       setStep("payment");
                     } catch {
-                      alert("Failed to send OTP. Please try again.");
+                      // Error is already toasted inside requestOtp, no need to alert again.
                     }
                   }}
                   disabled={
-                    !formData.firstName || !formData.lastName || !formData.email ||
-                    !formData.address || !formData.city || !formData.state || !formData.zipCode
+                    !formData.firstName ||
+                    !formData.lastName ||
+                    !formData.email ||
+                    !formData.address ||
+                    !formData.city ||
+                    !formData.state ||
+                    !formData.zipCode
                   }
                 >
                   Continue to Payment
@@ -334,15 +493,21 @@ const CheckoutDialog = ({
               </>
             )}
             {step === "payment" && (
-              <Button onClick={() => {
-                setStep("details");
-                setOtpSent(false);
-                setOtpVerified(false);
-                setOtpError("");
-              }}>Back</Button>
+              <Button
+                onClick={() => {
+                  setStep("details");
+                  setOtpSent(false);
+                  setOtpVerified(false);
+                  setOtpError("");
+                }}
+              >
+                Back
+              </Button>
             )}
             {step === "confirmation" && (
-              <Button className="w-full" onClick={completeOrder}>Close</Button>
+              <Button className="w-full" onClick={completeOrder}>
+                Close
+              </Button>
             )}
           </div>
         </div>

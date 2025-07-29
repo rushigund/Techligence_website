@@ -2,6 +2,7 @@ import { useState, forwardRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -11,6 +12,7 @@ import {
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
 import {
+  type LucideIcon,
   Menu,
   Bot,
   User,
@@ -39,12 +41,39 @@ import {
   Smile,
   Search,
   LogOut,
-  HouseIcon, // Import LogOut icon
+  House, // Import LogOut icon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ShoppingCart from "./ShoppingCart";
 import { useAuth } from "@/context/AuthContext"; // Import useAuth hook
 import { useNavigate } from "react-router-dom"; // Import useNavigate
+
+// Type definitions for navigation items
+type NavItem = {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+};
+
+type DropdownItem = {
+  title: string;
+  href: string;
+  description: string;
+  icon: LucideIcon;
+};
+
+type DropdownCategory = {
+  name: string;
+  items: DropdownItem[];
+};
+
+type DropdownConfig = {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+  items?: DropdownItem[];
+  categories?: DropdownCategory[];
+};
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -66,7 +95,7 @@ const Navigation = () => {
 
   // Navigation structure with dropdowns
   const navigationConfig = {
-    simple: [{ name: "Home", href: "/", icon: HouseIcon }],
+    simple: [{ name: "", href: "/", icon: House }],
     dropdown: {
       products: {
         name: "Products",
@@ -153,10 +182,9 @@ const Navigation = () => {
             description: "Learn about our mission and values",
             icon: Building,
           },
-          
         ],
       },
-      robotlab: {
+      /* robotlab: {
         name: "Robot Lab",
         href: "/robot-lab",
         icon: Beaker,
@@ -215,18 +243,18 @@ const Navigation = () => {
             ],
           },
         ],
-      },
+      },*/
     },
-    simple_end: [],
+    simple_end: [{ name: "Robot Lab", href: "/robot-lab", icon: Beaker }],
   };
 
   const isActive = (href: string) => {
-    // Controller should always stay highlighted as it's the main feature
-    if (href === "/controller") {
+    // Robot Lab should always stay highlighted as it's the main feature
+    if (href === "/robot-lab") {
       return true;
     }
 
-    // Don't highlight Home when we're on the home page (since Controller takes priority)
+    // Don't highlight Home when we're on the home page (since Robot Lab takes priority)
     if (location.pathname === "/" && href === "/") {
       return false;
     }
@@ -237,12 +265,12 @@ const Navigation = () => {
   };
 
   const isDropdownActive = (
-    items: any[] | undefined,
-    categories: any[] | undefined,
+    items: DropdownItem[] | undefined,
+    categories: DropdownCategory[] | undefined,
   ) => {
     if (categories) {
       return categories.some((category) =>
-        category.items.some((item: any) => isActive(item.href)),
+        category.items.some((item: DropdownItem) => isActive(item.href)),
       );
     }
     if (items) {
@@ -254,13 +282,13 @@ const Navigation = () => {
   const NavLink = forwardRef<
     HTMLAnchorElement,
     {
-      item: any;
+      item: NavItem;
       mobile?: boolean;
     }
   >(({ item, mobile = false }, ref) => {
-    const isController = item.href === "/controller";
+    const isRobotLabLink = item.href === "/robot-lab";
     const shouldHighlight =
-      isActive(item.href) || (isController && location.pathname === "/");
+      isActive(item.href) || (isRobotLabLink && location.pathname === "/");
 
     return (
       <Link
@@ -269,8 +297,8 @@ const Navigation = () => {
         onClick={() => mobile && setIsOpen(false)}
         className={cn(
           "flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium",
-          // Special styling for Controller
-          isController
+          // Special styling for Robot Lab
+          isRobotLabLink
             ? shouldHighlight
               ? "bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg ring-2 ring-orange-200 dark:ring-orange-800"
               : "text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950 border border-orange-200 dark:border-orange-800"
@@ -291,9 +319,14 @@ const Navigation = () => {
     config,
     mobile = false,
   }: {
-    config: any;
+    config?: DropdownConfig;
     mobile?: boolean;
   }) => {
+    // Add a guard clause to prevent crashes if the config is missing.
+    if (!config) {
+      return null;
+    }
+
     const isRobotLabDropdown = config.name === "Robot Lab";
     const shouldHighlightRobotLab =
       isRobotLabDropdown &&
@@ -321,31 +354,33 @@ const Navigation = () => {
           <div className="ml-4 space-y-3">
             {config.categories
               ? config.categories.map(
-                  (category: any, categoryIndex: number) => (
+                  (category: DropdownCategory, categoryIndex: number) => (
                     <div key={categoryIndex} className="space-y-1">
                       <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-3 py-1">
                         {category.name}
                       </div>
-                      {category.items.map((item: any, index: number) => (
-                        <Link
-                          key={index}
-                          to={item.href}
-                          onClick={() => setIsOpen(false)}
-                          className={cn(
-                            "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors",
-                            isActive(item.href)
-                              ? "bg-primary text-primary-foreground"
-                              : "text-muted-foreground hover:text-foreground hover:bg-accent",
-                          )}
-                        >
-                          <item.icon className="h-3 w-3" />
-                          {item.title}
-                        </Link>
-                      ))}
+                      {category.items.map(
+                        (item: DropdownItem, index: number) => (
+                          <Link
+                            key={index}
+                            to={item.href}
+                            onClick={() => setIsOpen(false)}
+                            className={cn(
+                              "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors",
+                              isActive(item.href)
+                                ? "bg-primary text-primary-foreground"
+                                : "text-muted-foreground hover:text-foreground hover:bg-accent",
+                            )}
+                          >
+                            <item.icon className="h-3 w-3" />
+                            {item.title}
+                          </Link>
+                        ),
+                      )}
                     </div>
                   ),
                 )
-              : config.items?.map((item: any, index: number) => (
+              : config.items?.map((item: DropdownItem, index: number) => (
                   <Link
                     key={index}
                     to={item.href}
@@ -389,34 +424,36 @@ const Navigation = () => {
             {config.categories ? (
               <div className="space-y-6">
                 {config.categories.map(
-                  (category: any, categoryIndex: number) => (
+                  (category: DropdownCategory, categoryIndex: number) => (
                     <div key={categoryIndex}>
                       <h4 className="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                         {category.name}
                       </h4>
                       <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
-                        {category.items.map((item: any, index: number) => (
-                          <NavigationMenuLink key={index} asChild>
-                            <Link
-                              to={item.href}
-                              className={cn(
-                                "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
-                                isActive(item.href) &&
-                                  "bg-primary text-primary-foreground",
-                              )}
-                            >
-                              <div className="flex items-center gap-2 mb-2">
-                                <item.icon className="h-4 w-4" />
-                                <div className="text-sm font-medium leading-none">
-                                  {item.title}
+                        {category.items.map(
+                          (item: DropdownItem, index: number) => (
+                            <NavigationMenuLink key={index} asChild>
+                              <Link
+                                to={item.href}
+                                className={cn(
+                                  "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
+                                  isActive(item.href) &&
+                                    "bg-primary text-primary-foreground",
+                                )}
+                              >
+                                <div className="flex items-center gap-2 mb-2">
+                                  <item.icon className="h-4 w-4" />
+                                  <div className="text-sm font-medium leading-none">
+                                    {item.title}
+                                  </div>
                                 </div>
-                              </div>
-                              <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
-                                {item.description}
-                              </p>
-                            </Link>
-                          </NavigationMenuLink>
-                        ))}
+                                <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+                                  {item.description}
+                                </p>
+                              </Link>
+                            </NavigationMenuLink>
+                          ),
+                        )}
                       </div>
                     </div>
                   ),
@@ -424,7 +461,7 @@ const Navigation = () => {
               </div>
             ) : (
               <div className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
-                {config.items?.map((item: any, index: number) => (
+                {config.items?.map((item: DropdownItem, index: number) => (
                   <NavigationMenuLink key={index} asChild>
                     <Link
                       to={item.href}
@@ -508,12 +545,12 @@ const Navigation = () => {
             <ShoppingCart />
             {isAuthenticated ? (
               <>
-                
-                  <Button variant="ghost" size="sm" className="gap-2">
-                    <User className="h-4 w-4" />
-                    {user?.firstName || "Account"} {/* Display user's first name */}
-                  </Button>
-                
+                <Button variant="ghost" size="sm" className="gap-2">
+                  <User className="h-4 w-4" />
+                  {user?.firstName || "Account"}{" "}
+                  {/* Display user's first name */}
+                </Button>
+
                 <Button onClick={handleLogout} size="sm" className="gap-2">
                   <LogOut className="h-4 w-4" />
                   Sign Out
@@ -584,16 +621,19 @@ const Navigation = () => {
 
                 {isAuthenticated ? (
                   <>
-                   
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start gap-2"
-                      >
-                        <User className="h-4 w-4" />
-                        {user?.firstName || "Account"} {/* Display user's first name */}
-                      </Button>
-                    
-                    <Button onClick={handleLogout} className="w-full justify-start gap-2">
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start gap-2"
+                    >
+                      <User className="h-4 w-4" />
+                      {user?.firstName || "Account"}{" "}
+                      {/* Display user's first name */}
+                    </Button>
+
+                    <Button
+                      onClick={handleLogout}
+                      className="w-full justify-start gap-2"
+                    >
                       <LogOut className="h-4 w-4" />
                       Sign Out
                     </Button>

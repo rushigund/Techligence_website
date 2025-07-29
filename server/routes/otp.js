@@ -1,5 +1,3 @@
-
-
 import express from "express";
 import { generateOTP, saveOTP, sendOTP, verifyOTP } from "../services/otpService.js";
 
