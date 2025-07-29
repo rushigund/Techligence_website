@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import { ALL } from "dns";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -20,7 +21,7 @@ export default defineConfig(({ mode }) => ({
       },
     },
   },
-  allowedHosts: ["techligence-website-2.onrender.com"],
+  allowedHosts: "all",
   plugins: [react()],
   resolve: {
     alias: {
