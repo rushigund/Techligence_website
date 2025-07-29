@@ -60,7 +60,7 @@ app.use(limiter);
 // CORS configuration
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:8080",
+    origin: process.env.VITE_API_URL || "http://localhost:8080",
     credentials: true,
   }),
 );
