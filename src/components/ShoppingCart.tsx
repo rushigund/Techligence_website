@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import CheckoutDialog from "./CheckoutDialog";
+import { useNavigate } from "react-router-dom"; // 👈 React Router
 
 const ShoppingCartComponent = () => {
   const {
@@ -33,6 +34,7 @@ const ShoppingCartComponent = () => {
   } = useCartStore();
 
   const [showCheckout, setShowCheckout] = useState(false);
+  const navigate = useNavigate(); // 👈 useNavigate hook
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("en-IN", {
@@ -84,7 +86,12 @@ const ShoppingCartComponent = () => {
                 <p className="text-muted-foreground mb-4">
                   Add some amazing robots to get started!
                 </p>
-                <Button onClick={() => setOpen(false)}>
+                <Button
+                  onClick={() => {
+                    setOpen(false);
+                    navigate("/products");
+                  }}
+                >
                   Continue Shopping
                 </Button>
               </div>

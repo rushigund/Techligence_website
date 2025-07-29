@@ -142,7 +142,7 @@ const CheckoutDialog = ({
     }
   };
 
-  const loadRazorpayScript = () =>
+  /*const loadRazorpayScript = () =>
     new Promise((resolve) => {
       const script = document.createElement("script");
       script.src = "https://checkout.razorpay.com/v1/checkout.js";
@@ -150,10 +150,10 @@ const CheckoutDialog = ({
       script.onerror = () => resolve(false);
       document.body.appendChild(script);
     });
-
+*/
   const startRazorpayPayment = async () => {
     setIsProcessing(true);
-    const loaded = await loadRazorpayScript();
+    const loaded = true;
     if (!loaded) {
       toast.error("Razorpay SDK failed to load. Please check your connection.");
       setIsProcessing(false);
