@@ -13,19 +13,19 @@ const ControllerLandingPage = () => {
   const { toast } = useToast(); // Initialize toast for messages
 
   const handleGetStarted = () => {
-    navigate("/controller/advanced-urdf-controller");
-    // if (isAuthenticated) {
-    //   // If authenticated, open the controller in a new tab
-    //   window.open("https://robotmanipulator.vercel.app/", "_blank", "noopener,noreferrer");
-    // } else {
-    //   // If not authenticated, show a toast message and redirect to auth page
-    //   toast({
-    //     title: "Authentication Required",
-    //     description: "You need to sign in to access the controller.",
-    //     variant: "destructive", // Use a destructive variant for error messages
-    //   });
-    //   navigate("/auth"); // Redirect to the authentication page
-    // }
+    
+    if (isAuthenticated) {
+      // If authenticated, open the controller in a new tab
+      navigate("/controller/advanced-urdf-controller");
+    } else {
+      // If not authenticated, show a toast message and redirect to auth page
+      toast({
+        title: "Authentication Required",
+        description: "You need to sign in to access the controller.",
+        variant: "destructive", // Use a destructive variant for error messages
+      });
+      navigate("/auth"); // Redirect to the authentication page
+    }
   };
 
   return (
