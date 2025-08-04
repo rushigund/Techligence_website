@@ -57,8 +57,8 @@ const limiter = rateLimit({
 
 app.use(limiter);
 
-// CORS configuration
-app.use(
+// CORS configuration by default
+/*app.use(
   cors({
     //origin: process.env.VITE_API_URL || "http://localhost:8080",
     origin:["https://techligence-website.vercel.app", 
@@ -66,7 +66,31 @@ app.use(
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   }),
+);*/
+
+const allowedOrigins = [
+  "https://techligence-website.vercel.app",
+  "http://localhost:5173",
+  "http://localhost:8080"
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true); // Allow curl/postman
+      if (
+        allowedOrigins.includes(origin) ||
+        /\.vercel\.app$/.test(new URL(origin).hostname) // Allow Vercel preview deployments
+      ) {
+        return callback(null, true);
+      }
+      return callback(new Error(`❌ CORS error: ${origin} not allowed`));
+    },
+    credentials: true,
+  })
 );
+
+
 
 // General middleware
 app.use(compression());
