@@ -9,8 +9,8 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link, useNavigate } from "react-router-dom"; // Import useNavigate
-import JobApplicationForm from '@/components/JobApplicationForm';
-import CreateJobListingForm from '@/components/CreateJobListingForm'; // Import CreateJobListingForm
+import JobApplicationForm from "@/components/JobApplicationForm";
+import CreateJobListingForm from "@/components/CreateJobListingForm"; // Import CreateJobListingForm
 import {
   ArrowRight,
   MapPin,
@@ -59,15 +59,24 @@ const Career = () => {
   const queryClient = useQueryClient(); // Get query client for invalidation
 
   // Use useQuery to fetch job listings from the backend
-  const { data: jobOpenings, isLoading, isError, error } = useQuery<JobListing[], Error>({
+  const {
+    data: jobOpenings,
+    isLoading,
+    isError,
+    error,
+  } = useQuery<JobListing[], Error>({
     queryKey: ["jobListings"], // Unique key for this query
     queryFn: async () => {
       const response = await careerAPI.getJobListings();
       if (response.data.success) {
         // Filter for active jobs if not admin, otherwise show all
-        return isAdmin ? response.data.data : response.data.data.filter((job: JobListing) => job.isActive);
+        return isAdmin
+          ? response.data.data
+          : response.data.data.filter((job: JobListing) => job.isActive);
       } else {
-        throw new Error(response.data.message || "Failed to fetch job listings.");
+        throw new Error(
+          response.data.message || "Failed to fetch job listings.",
+        );
       }
     },
     staleTime: 5 * 60 * 1000, // Data is considered fresh for 5 minutes
@@ -77,7 +86,6 @@ const Career = () => {
     // will re-run `queryFn` if `isAdmin` (from `useAuth`) changes and `queryKey` is stable.
     // Explicit invalidation on auth state change would be more robust if needed.
   });
-
 
   const handleApplyClick = (job: JobListing) => {
     setSelectedJob(job);
@@ -104,18 +112,26 @@ const Career = () => {
 
   // Handle Delete Job Listing
   const handleDeleteJob = async (jobId: string) => {
-    if (window.confirm("Are you sure you want to delete this job listing? This action cannot be undone.")) {
+    if (
+      window.confirm(
+        "Are you sure you want to delete this job listing? This action cannot be undone.",
+      )
+    ) {
       try {
         const response = await careerAPI.deleteJobListing(jobId);
         if (response.data.success) {
-          toast.success(response.data.message || "Job listing deleted successfully!");
+          toast.success(
+            response.data.message || "Job listing deleted successfully!",
+          );
           queryClient.invalidateQueries({ queryKey: ["jobListings"] }); // Invalidate to refetch updated list
         } else {
           toast.error(response.data.message || "Failed to delete job listing.");
         }
       } catch (error: any) {
         console.error("Error deleting job listing:", error);
-        toast.error(error.response?.data?.message || "An error occurred during deletion.");
+        toast.error(
+          error.response?.data?.message || "An error occurred during deletion.",
+        );
       }
     }
   };
@@ -234,7 +250,11 @@ const Career = () => {
             {/* Admin button to create new job listing */}
             {isAdmin && (
               <div className="mt-8">
-                <Button size="lg" className="gap-2" onClick={handleCreateJobClick}>
+                <Button
+                  size="lg"
+                  className="gap-2"
+                  onClick={handleCreateJobClick}
+                >
                   <PlusCircle className="w-5 h-5" />
                   Create New Job Listing
                 </Button>
@@ -245,101 +265,111 @@ const Career = () => {
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="ml-2 text-muted-foreground">Loading job openings...</p>
+              <p className="ml-2 text-muted-foreground">
+                Loading job openings...
+              </p>
             </div>
           ) : isError ? (
             <div className="text-center py-16 text-red-500">
-              <p>Error loading job openings: {error?.message || "Unknown error"}</p>
+              <p>
+                Error loading job openings: {error?.message || "Unknown error"}
+              </p>
               <p>Please ensure your backend is running and accessible.</p>
             </div>
-          ) : (jobOpenings && jobOpenings.length > 0 ? (
+          ) : jobOpenings && jobOpenings.length > 0 ? (
             <div className="grid gap-6 max-w-4xl mx-auto">
-              {jobOpenings.map((job) => ( // Removed index as key, using job._id
-                <Card
-                  key={job._id}
-                  className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 group"
-                >
-                  <CardHeader>
-                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                      <div>
-                        <CardTitle className="text-xl group-hover:text-primary transition-colors">
-                          {job.title}
-                        </CardTitle>
-                        <CardDescription className="text-base mt-2">
-                          {job.description}
-                        </CardDescription>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {/* Admin Edit and Delete Buttons */}
-                        {isAdmin && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEditJob(job._id)}
-                              className="h-8 w-8 text-blue-500 hover:bg-blue-50"
-                              title="Edit Job Listing"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteJob(job._id)}
-                              className="h-8 w-8 text-red-500 hover:bg-red-50"
-                              title="Delete Job Listing"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </>
-                        )}
-                        <Button
-                          className="gap-2"
-                          onClick={() => handleApplyClick(job)}
-                        >
-                          Apply Now
-                          <ChevronRight className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-wrap gap-4 mb-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Building className="w-4 h-4" />
-                        {job.department}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <MapPin className="w-4 h-4" />
-                        {job.location}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="w-4 h-4" />
-                        {job.type}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <DollarSign className="w-4 h-4" />
-                        {job.salary}
-                      </div>
-                      {/* Display isActive status for admins */}
-                      {isAdmin && (
-                        <div className="flex items-center gap-1">
-                          <Badge variant={job.isActive ? "default" : "destructive"}>
-                            {job.isActive ? "Active" : "Inactive"}
-                          </Badge>
+              {jobOpenings.map(
+                (
+                  job, // Removed index as key, using job._id
+                ) => (
+                  <Card
+                    key={job._id}
+                    className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 group"
+                  >
+                    <CardHeader>
+                      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                        <div>
+                          <CardTitle className="text-xl group-hover:text-primary transition-colors">
+                            {job.title}
+                          </CardTitle>
+                          <CardDescription className="text-base mt-2">
+                            {job.description}
+                          </CardDescription>
                         </div>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {job.skills.map((skill, skillIndex) => (
-                        <Badge key={skillIndex} variant="secondary">
-                          {skill}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                        <div className="flex items-center gap-2 shrink-0">
+                          {/* Admin Edit and Delete Buttons */}
+                          {isAdmin && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEditJob(job._id)}
+                                className="h-8 w-8 text-blue-500 hover:bg-blue-50"
+                                title="Edit Job Listing"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteJob(job._id)}
+                                className="h-8 w-8 text-red-500 hover:bg-red-50"
+                                title="Delete Job Listing"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </>
+                          )}
+                          <Button
+                            className="gap-2"
+                            onClick={() => handleApplyClick(job)}
+                          >
+                            Apply Now
+                            <ChevronRight className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-wrap gap-4 mb-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Building className="w-4 h-4" />
+                          {job.department}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <MapPin className="w-4 h-4" />
+                          {job.location}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-4 h-4" />
+                          {job.type}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <DollarSign className="w-4 h-4" />
+                          {job.salary}
+                        </div>
+                        {/* Display isActive status for admins */}
+                        {isAdmin && (
+                          <div className="flex items-center gap-1">
+                            <Badge
+                              variant={job.isActive ? "default" : "destructive"}
+                            >
+                              {job.isActive ? "Active" : "Inactive"}
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {job.skills.map((skill, skillIndex) => (
+                          <Badge key={skillIndex} variant="secondary">
+                            {skill}
+                          </Badge>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ),
+              )}
             </div>
           ) : (
             <div className="text-center py-16">
@@ -351,7 +381,7 @@ const Career = () => {
                 Check back soon for new opportunities!
               </p>
             </div>
-          ))}
+          )}
         </div>
       </section>
 
@@ -378,7 +408,7 @@ const Career = () => {
               <Button
                 size="lg"
                 variant="outline"
-                className="gap-2 text-lg px-8 border-white text-white hover:bg-white hover:text-primary"
+                className="gap-2 text-lg px-8 border-white text-primary"
               >
                 Contact Us
                 <ChevronRight className="w-5 h-5" />
