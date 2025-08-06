@@ -8,8 +8,8 @@ const router = express.Router();
 
 // --- Public Routes (visible to all users) ---
 
-// GET /api/blogposts - Get all blog posts
-router.get("/blogposts", async (req, res) => {
+// GET / - Get all blog posts (when mounted at /api/blogposts)
+router.get("/", async (req, res) => {
   try {
     const blogPosts = await BlogPost.find({}).sort({ publishedDate: -1 }); // Fetch all posts, sorted by date
     res.json({
@@ -23,9 +23,9 @@ router.get("/blogposts", async (req, res) => {
   }
 });
 
-// GET /api/blogposts/:postId - Get a single blog post by postId
+// GET /:postId - Get a single blog post by postId
 // This route is now public, allowing any user to view an individual blog post.
-router.get("/blogposts/:postId", async (req, res) => {
+router.get("/:postId", async (req, res) => {
   try {
     const { postId } = req.params;
     const blogPost = await BlogPost.findOne({ postId: postId });
@@ -47,9 +47,9 @@ router.get("/blogposts/:postId", async (req, res) => {
 
 // --- Admin-Only Routes (for CRUD operations) ---
 
-// POST /api/blogposts - Add a new blog post (Admin only)
+// POST / - Add a new blog post (Admin only)
 router.post(
-  "/blogposts",
+  "/",
   authenticateToken,
   authorizeRoles('admin'), // Only admins can add blog posts
   [
@@ -97,9 +97,9 @@ router.post(
   }
 );
 
-// PUT /api/blogposts/:postId - Update an existing blog post (Admin only)
+// PUT /:postId - Update an existing blog post (Admin only)
 router.put(
-  "/blogposts/:postId",
+  "/:postId",
   authenticateToken,
   authorizeRoles('admin'),
   [
@@ -156,9 +156,9 @@ router.put(
   }
 );
 
-// DELETE /api/blogposts/:postId - Delete a blog post (Admin only)
+// DELETE /:postId - Delete a blog post (Admin only)
 router.delete(
-    "/blogposts/:postId",
+    "/:postId",
     authenticateToken,
     authorizeRoles('admin'),
     async (req, res) => {

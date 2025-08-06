@@ -11,6 +11,7 @@ import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import fs from "fs";
 
 // Import Pinecone service functions
 import { initializePinecone, ensurePineconeIndex } from './services/pineconeService.js'; // Adjust path as needed
@@ -76,6 +77,7 @@ const allowedOriginsFromEnv = process.env.CORS_ALLOWED_ORIGINS
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:8080",
+  process.env.CLIENT_URL,
   ...allowedOriginsFromEnv,
 ];
 
@@ -180,10 +182,10 @@ app.get("/debug", (req, res) => {
 
 // API routes
 app.use("/api/auth", authRoutes);
-app.use("/api", productRoutes);
-app.use("/api", blogRoutes);
-app.use("/api", contactRoutes);
-app.use("/api", careerRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/blogposts", blogRoutes); // Changed from /api/blog
+app.use("/api/contact", contactRoutes);
+app.use("/api/career", careerRoutes);
 app.use("/api/chatbot", chatbotRoutes);
 app.use("/api/admin", adminIngestionRoutes); // NEW: Register admin ingestion routes
 app.use("/api/otp", otpRoutes);
@@ -210,35 +212,63 @@ app.use((err, req, res, next) => {
 
 // SPA fallback route - serve React app for all non-API routes
 app.get("*", (req, res) => {
-  console.log(`📍 Route requested: ${req.method} ${req.path}`);
-  console.log(`🔍 Headers:`, req.headers);
+  // This middleware catches all GET requests that haven't been handled by other routes.
+  // It's essential for Single Page Applications (SPAs) that use client-side routing.
 
+  // First, check if the request is for an API endpoint that wasn't found.
   if (req.path.startsWith("/api/")) {
-    console.log(`❌ API route not found: ${req.path}`);
+    console.warn(`❌ 404 - API route not found: ${req.method} ${req.path}`);
     return res.status(404).json({
       success: false,
       message: "API route not found",
     });
   }
 
-  if (process.env.NODE_ENV !== "production") {
-    const redirectUrl = `${process.env.CLIENT_URL || "http://localhost:8080"}${req.path}`;
-    console.log(`🔄 Redirecting to frontend: ${redirectUrl}`);
-    return res.redirect(redirectUrl);
-  }
+  // Otherwise, serve the main HTML file of your frontend application.
+  // The client-side router will then handle the specific path (e.g., /about, /contact).
+  const indexPath = path.join(__dirname, "../dist", "index.html");
 
-  const buildPath = path.join(__dirname, "../dist");
-  console.log(`📁 Serving React app from: ${buildPath}`);
-  res.sendFile(path.join(buildPath, "index.html"));
+  // Check if the file exists before trying to send it.
+  // This provides a clearer error message in production if the frontend hasn't been built correctly.
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    // This part is crucial for debugging deployment issues.
+    console.error(`❌ SPA Fallback Error: index.html not found at ${indexPath}`);
+    console.error("This likely means the frontend application has not been built or is not in the correct location.");
+    res.status(404).json({
+        success: false,
+        message: "Application resource not found. This is not an API endpoint.",
+        info: "If you are trying to access the frontend, it seems it has not been built or deployed correctly with the backend."
+    });
+  }
 });
 
 // Start server function
 const startServer = () => {
+  server.on("error", (error) => {
+    if (error.syscall !== "listen") {
+      throw error;
+    }
+
+    // handle specific listen errors with friendly messages
+    switch (error.code) {
+      case "EACCES":
+        console.error(`❌ Port ${PORT} requires elevated privileges.`);
+        process.exit(1);
+        break;
+      case "EADDRINUSE":
+        console.error(`❌ Port ${PORT} is already in use. Please stop the other process or use a different port.`);
+        process.exit(1);
+        break;
+      default:
+        throw error;
+    }
+  });
+
   server.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
-    console.log(
-      `🌐 Client URL: ${process.env.CLIENT_URL || "http://localhost:5173"}`,
-    );
+    console.log(`🌐 Allowed Client Origins: ${allowedOrigins.join(", ")}`);
   });
 };
 

@@ -8,8 +8,8 @@ const router = express.Router();
 
 // --- Public Routes (e.g., for general product listing) ---
 
-// GET /api/products - Get all products
-router.get("/products", async (req, res) => {
+// GET / - Get all products
+router.get("/", async (req, res) => {
   try {
     const products = await Product.find({}); // Fetch all products
     res.json({
@@ -25,9 +25,9 @@ router.get("/products", async (req, res) => {
 
 // --- Admin-Only Routes ---
 
-// GET /api/products/:productId - Get a single product by ID (for admin editing)
+// GET /:productId - Get a single product by ID (for admin editing)
 router.get(
-  "/products/:productId",
+  "/:productId",
   authenticateToken,
   authorizeRoles('admin'), // Only admins can fetch product details for editing
   async (req, res) => {
@@ -53,9 +53,9 @@ router.get(
 );
 
 
-// POST /api/products - Add a new product (Admin only)
+// POST / - Add a new product (Admin only)
 router.post(
-  "/products",
+  "/",
   authenticateToken,
   authorizeRoles('admin'), // Only admins can add products
   [
@@ -116,9 +116,9 @@ router.post(
   }
 );
 
-// PUT /api/products/:productId - Update an existing product (Admin only)
+// PUT /:productId - Update an existing product (Admin only)
 router.put(
-  "/products/:productId",
+  "/:productId",
   authenticateToken,
   authorizeRoles('admin'),
   [
@@ -185,9 +185,9 @@ router.put(
   }
 );
 
-// DELETE /api/products/:productId - Delete a product (Admin only)
+// DELETE /:productId - Delete a product (Admin only)
 router.delete(
-  "/products/:productId",
+  "/:productId",
   authenticateToken,
   authorizeRoles('admin'),
   async (req, res) => {

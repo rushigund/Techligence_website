@@ -4,6 +4,7 @@ import { body, validationResult } from "express-validator";
 import rateLimit from "express-rate-limit";
 import User from "../models/User.js";
 import { authenticateToken } from "../middleware/auth.js";
+import { resolveSoa } from "dns";
 
 const router = express.Router();
 
@@ -398,5 +399,6 @@ router.post("/refresh", authenticateToken, async (req, res) => {
     });
   }
 });
+
 
 export default router;

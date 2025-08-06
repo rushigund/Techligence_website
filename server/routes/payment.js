@@ -1,9 +1,7 @@
 import express from "express";
 import Razorpay from "razorpay";
-import dotenv from "dotenv";
 import crypto from "crypto";
 
-dotenv.config();
 const router = express.Router();
 
 router.post("/create-order", async (req, res) => {
